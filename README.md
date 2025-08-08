@@ -35,7 +35,7 @@ Uangku adalah aplikasi mobile yang dibangun menggunakan React Native (Expo) untu
 
 ## Screenshots
 
-*(Di sini Anda bisa menambahkan beberapa screenshot dari aplikasi Anda)*
+
 
 ![Login Screen](path/to/your/screenshot1.png)
 ![Home Screen](path/to/your/screenshot2.png)
