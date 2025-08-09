@@ -39,7 +39,7 @@ const AppNavigator = () => {
     <NavigationContainer>
       {/* Terapkan screenOptions ke semua layar di dalam navigator ini */}
       <Stack.Navigator 
-        initialRouteName="SplashScreen" 
+        initialRouteName="MainTabs" 
         screenOptions={{ headerShown: false }}
       >
         {/* GRUP 1: Alur Otentikasi Pengguna */}

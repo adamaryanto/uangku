@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, TextInput, Alert, ImageBackground } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -20,38 +20,38 @@ const LabeledInput = ({ label, placeholder, value, onChangeText, keyboardType = 
 );
 
 const TambahTargetScreen = ({ navigation }) => {
-  const [kategori, setKategori] = useState('');
-  const [sumberDana, setSumberDana] = useState('');
-  const [jumlah, setJumlah] = useState('');
-  const [catatan, setCatatan] = useState('');
+  const [name, setName] = useState('');
+  const [targetAmount, setTargetAmount] = useState('');
+  const [targetDate, setTargetDate] = useState('');
   
-  const { addTransaction } = useTransactions();
+  const { addTarget } = useTransactions();
 
   const handleSave = () => {
-    if (!kategori || !sumberDana || !jumlah) {
-      Alert.alert('Error', 'Kategori, sumber dana, dan jumlah wajib diisi.');
+    if (!name || !targetAmount) {
+      Alert.alert('Error', 'Nama target dan jumlah target wajib diisi.');
       return;
     }
 
-    const amount = parseFloat(jumlah.replace(/\./g, '').replace(',', '.'));
+    // Hapus semua karakter non-digit dan konversi ke number
+    const amount = parseInt(targetAmount.replace(/\D/g, ''), 10);
     
     if (isNaN(amount) || amount <= 0) {
-      Alert.alert('Error', 'Jumlah harus berupa angka yang valid dan lebih dari 0');
+      Alert.alert('Error', 'Jumlah target harus berupa angka yang valid dan lebih dari 0');
       return;
     }
 
-    const newTransaction = {
-      type: 'Pemasukan',
-      category: kategori,
-      amount: amount,
-      description: catatan || `Pemasukan dari ${sumberDana}`,
-      icon: 'cash-plus',
-      source: sumberDana
+    const newTarget = {
+      id: Date.now().toString(),
+      name: name.trim(),
+      targetAmount: amount,
+      savedAmount: 0,
+      date: targetDate || new Date().toLocaleDateString('id-ID')
     };
 
-    addTransaction(newTransaction);
+    addTarget(newTarget);
     
-    Alert.alert('Sukses', 'Pemasukan berhasil dicatat.', [
+    
+    Alert.alert('Sukses', 'Target berhasil ditambahkan.', [
       { text: 'OK', onPress: () => navigation.goBack() }
     ]);
   };
@@ -59,12 +59,19 @@ const TambahTargetScreen = ({ navigation }) => {
   // Format input jumlah dengan titik sebagai pemisah ribuan
   const formatCurrencyInput = (text) => {
     // Hapus semua karakter selain angka
-    const numericValue = text.replace(/[^0-9]/g, '');
+    const numericValue = text.replace(/\D/g, '');
     
     // Format dengan titik sebagai pemisah ribuan
     const formattedValue = numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
     
     return formattedValue;
+  };
+
+  // Handle perubahan input jumlah
+  const handleAmountChange = (text) => {
+    // Simpan nilai tanpa format untuk perhitungan
+    const rawValue = text.replace(/\./g, '');
+    setTargetAmount(rawValue);
   };
 
   return (
@@ -81,48 +88,45 @@ const TambahTargetScreen = ({ navigation }) => {
               <Text style={styles.backButtonText}>Kembali</Text>
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Target</Text>
-            <Text style={styles.headerSubtitle}>Catat Semua tujuan keuangan yang kamu punya , seperti traveling, atau lainya</Text>
+            <Text style={styles.headerSubtitle}>Catat Semua tujuan keuangan yang kamu punya, seperti traveling, atau lainya</Text>
           </View>
 
           <View style={styles.contentContainer}>
             <View style={styles.formCard}>
-                 <View style={styles.card}>
-                           {/* --- DIUBAH --- Judul dan tombol sekarang dibungkus dalam satu View --- */}
-                           <View style={styles.cardHeader}>
-                               <Text style={styles.cardTitle}>Periode Transaksi :</Text>
-
-                           </View>
-                           <View style={styles.dateContainer}>
-                               <TouchableOpacity style={styles.datePicker}>
-                                   <Text style={styles.dateLabel}>Dari tanggal :</Text>
-                                   <Text style={styles.dateValue}>31-07-2025</Text>
-                               </TouchableOpacity>
-                               <TouchableOpacity style={styles.datePicker}>
-                                   <Text style={styles.dateLabel}>Sampai tanggal :</Text>
-                                   <Text style={styles.dateValue}>31-07-2025</Text>
-                               </TouchableOpacity>
-                           </View>
-                         </View>
-                    
+              <View style={styles.card}>
+                <View style={styles.cardHeader}>
+                  <Text style={styles.cardTitle}>Periode Transaksi :</Text>
+                </View>
+                <View style={styles.dateContainer}>
+                  <TouchableOpacity style={styles.datePicker}>
+                    <Text style={styles.dateLabel}>Dari tanggal :</Text>
+                    <Text style={styles.dateValue}>31-07-2025</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.datePicker}>
+                    <Text style={styles.dateLabel}>Sampai tanggal :</Text>
+                    <Text style={styles.dateValue}>31-07-2025</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
 
               <LabeledInput 
                 label="Nama Target"
-                placeholder="Traveling Dan Lainya"
-                value={kategori}
-                onChangeText={setKategori}
+                placeholder="Contoh: Liburan ke Bali"
+                value={name}
+                onChangeText={setName}
               />
               <LabeledInput 
-                label="Total Target"
-                placeholder="Rp"
-                value={sumberDana}
-                onChangeText={setSumberDana}
+                label="Jumlah Target"
+                placeholder="Contoh: 5.000.000"
+                value={formatCurrencyInput(targetAmount)}
+                onChangeText={handleAmountChange}
+                keyboardType="numeric"
               />
-
               <LabeledInput 
-                label="Catatan"
-                placeholder="Tambah catatan (opsional)"
-                value={catatan}
-                onChangeText={setCatatan}
+                label="Tanggal Target (opsional)"
+                placeholder="DD-MM-YYYY"
+                value={targetDate}
+                onChangeText={setTargetDate}
               />
 
               <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
@@ -175,7 +179,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 6,
     padding: 15,
-    marginTop:-20,
+    marginTop:-40,
     marginBottom: 11,
     elevation: 2,
     shadowColor: '#000',
@@ -194,7 +198,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
     marginBottom:10,
-    // marginBottom dihapus dari sini
   },
   dateContainer: {
     flexDirection: 'row',
@@ -210,7 +213,6 @@ const styles = StyleSheet.create({
   },
   dateValue: {
     fontSize: 16,
-    
     color: '#333',
     marginTop: 5,
   },
@@ -225,9 +227,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
-    
   },
-  
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',

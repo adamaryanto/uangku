@@ -11,14 +11,9 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTransactions } from '../../contexts/TransactionsContext';
 
 // Data target
-const targets = [
-  { id: '1', name: 'Iphone 12 pro max', targetAmount: 14000000, savedAmount: 6000000, date: '01-01-2025' },
-  { id: '2', name: 'Macbook Pro M3', targetAmount: 30000000, savedAmount: 6000000, date: '01-06-2025' },
-  { id: '3', name: 'Macbook Pro M3', targetAmount: 30000000, savedAmount: 6000000, date: '01-06-2025' },
-  { id: '4', name: 'Macbook Pro M3', targetAmount: 30000000, savedAmount: 6000000, date: '01-06-2025' },
-];
 
 // Format angka jadi Rupiah
 const formatCurrency = (number) => {
@@ -30,17 +25,48 @@ const formatCurrency = (number) => {
 };
 
 // Komponen progress bar
-const ProgressBar = ({ progress }) => (
-  <View style={styles.progressBarBackground}>
-    <View style={[styles.progressBarFill, { width: `${progress}%` }]} />
-  </View>
-);
 
 const TargetScreen = ({navigation}) => {
+  const ProgressBar = ({ progress }) => (
+    <View style={styles.progressBarBackground}>
+      <View style={[styles.progressBarFill, { width: `${progress}%` }]} />
+    </View>
+  );
   const [showAllTargets, setShowAllTargets] = React.useState(false);
   const [isMenuVisible, setIsMenuVisible] = useState(false);
-  const targetsToShow = showAllTargets ? targets : targets.slice(0, 2);
+  
 
+  const { targets = [], getTotalTargetAmount, getTotalSavedAmount } = useTransactions(); 
+   const targetsToShow = showAllTargets ? targets : targets.slice(0, 3);
+  const totalTarget = getTotalTargetAmount();
+  const totalSaved = getTotalSavedAmount();
+  const remainingTarget = totalTarget - totalSaved;
+  const renderTargetItem = ({ item }) => {
+    const progress = (item.savedAmount / item.targetAmount) * 100;
+    return (
+      <TouchableOpacity style={styles.targetItemCard}>
+        <View style={styles.targetItemHeader}>
+            <View style={styles.targetIconContainer}>
+                <MaterialCommunityIcons name="bullseye-arrow" size={24} color="#005AE0" />
+            </View>
+            <View style={styles.targetItemDetails}>
+                <Text style={styles.targetItemName}>{item.name}</Text>
+                <Text style={styles.targetItemSaved}>{formatCurrency(item.savedAmount)}</Text>
+            </View>
+            <View style={styles.targetItemAmountContainer}>
+                <Text style={styles.targetItemTarget}>{formatCurrency(item.targetAmount)}</Text>
+                <Text style={styles.targetItemDate}>Tanggal: {item.date}</Text>
+            </View>
+        </View>
+        <View style={styles.progressContainer}>
+            <Text style={styles.progressText}>{Math.floor(progress)}%</Text>
+            <ProgressBar progress={progress} />
+            <Text style={styles.progressText}>100%</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+  
     const handleNavigate = (screenName) => {
     setIsMenuVisible(false);
     navigation.navigate(screenName);
@@ -91,7 +117,7 @@ const TargetScreen = ({navigation}) => {
           {/* Total dana target */}
           <View style={styles.totalTargetCard}>
             <Text style={styles.totalTargetLabel}>Total dana target :</Text>
-            <Text style={styles.totalTargetAmount}>Rp. 40.000.000,00</Text>
+            <Text style={styles.totalTargetAmount}>{formatCurrency(totalTarget)}</Text>
           </View>
 
           {/* Summary */}
@@ -99,13 +125,13 @@ const TargetScreen = ({navigation}) => {
             <View style={styles.summaryCard}>
               <Text style={styles.summaryLabel}>Target terpenuhi :</Text>
               <Text style={[styles.summaryAmount, { color: '#FEB01A' }]}>
-                +Rp. 26.000.000,00
+                +{formatCurrency(totalSaved)}
               </Text>
             </View>
             <View style={styles.summaryCard}>
               <Text style={styles.summaryLabel}>Sisa dana target :</Text>
               <Text style={[styles.summaryAmount, { color: '#E63950' }]}>
-                -Rp. 14.000.000,00
+                -{formatCurrency(remainingTarget)}
               </Text>
             </View>
           </View>

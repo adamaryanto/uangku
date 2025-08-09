@@ -20,36 +20,40 @@ const LabeledInput = ({ label, placeholder, value, onChangeText, keyboardType = 
 );
 
 const TambahCicilanScreen = ({ navigation }) => {
-  const [kategori, setKategori] = useState('');
-  const [sumberDana, setSumberDana] = useState('');
-  const [jumlah, setJumlah] = useState('');
+  const [namaCicilan, setNamaCicilan] = useState('');
+  const [totalHutang, setTotalHutang] = useState('');
+  const [sudahDibayar, setSudahDibayar] = useState('');
+  const [jatuhTempo, setJatuhTempo] = useState('');
   const [catatan, setCatatan] = useState('');
   
-  const { addTransaction } = useTransactions();
+  const { addCicilan } = useTransactions();
 
   const handleSave = () => {
-    if (!kategori || !sumberDana || !jumlah) {
+    if (!namaCicilan || !totalHutang) {
       Alert.alert('Error', 'Kategori, sumber dana, dan jumlah wajib diisi.');
       return;
     }
 
-    const amount = parseFloat(jumlah.replace(/\./g, '').replace(',', '.'));
+    const totalAmount = parseFloat(totalHutang.replace(/\./g, ''));
+    const paidAmount = parseFloat(sudahDibayar.replace(/\./g, '')) || 0;
     
-    if (isNaN(amount) || amount <= 0) {
+    if (isNaN(totalAmount) || totalAmount <= 0) {
       Alert.alert('Error', 'Jumlah harus berupa angka yang valid dan lebih dari 0');
       return;
     }
 
-    const newTransaction = {
-      type: 'Pemasukan',
-      category: kategori,
-      amount: amount,
-      description: catatan || `Pemasukan dari ${sumberDana}`,
-      icon: 'cash-plus',
-      source: sumberDana
+    const newCicilan = {
+      name: namaCicilan,
+      totalAmount: totalAmount,
+      paidAmount: paidAmount,
+      dueDate: jatuhTempo || 'N/A',
+      description: catatan,
     };
 
-    addTransaction(newTransaction);
+    console.log('Menyimpan cicilan baru:', newCicilan);
+    
+    // --- DIUBAH --- Memanggil fungsi addCicilan
+    addCicilan(newCicilan);
     
     Alert.alert('Sukses', 'Pemasukan berhasil dicatat.', [
       { text: 'OK', onPress: () => navigation.goBack() }
@@ -108,16 +112,30 @@ const TambahCicilanScreen = ({ navigation }) => {
               <LabeledInput 
                 label="Nama Cicilan: "
                 placeholder="Iphone 12"
-                value={kategori}
-                onChangeText={setKategori}
+                value={namaCicilan}
+                onChangeText={setNamaCicilan}
               />
               <LabeledInput 
-                label="Total Cicilan: "
+                label="Total Hutang"
                 placeholder="Rp"
-                value={sumberDana}
-                onChangeText={setSumberDana}
+                value={formatCurrencyInput(totalHutang)}
+                onChangeText={(text) => setTotalHutang(text.replace(/\./g, ''))}
+                keyboardType="numeric"
               />
 
+              <LabeledInput 
+                label="Sudah Dibayar"
+                placeholder="Rp (opsional)"
+                value={formatCurrencyInput(sudahDibayar)}
+                onChangeText={(text) => setSudahDibayar(text.replace(/\./g, ''))}
+                keyboardType="numeric"
+              />
+              <LabeledInput 
+                label="Jatuh Tempo"
+                placeholder="DD-MM-YYYY"
+                value={jatuhTempo}
+                onChangeText={setJatuhTempo}
+              />
               <LabeledInput 
                 label="Catatan"
                 placeholder="Tambah catatan (opsional)"
@@ -175,7 +193,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 6,
     padding: 15,
-    marginTop:-20,
+    marginTop:-40,
     marginBottom: 11,
     elevation: 2,
     shadowColor: '#000',
