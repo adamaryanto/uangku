@@ -80,8 +80,8 @@ const TambahTargetScreen = ({ navigation }) => {
               <MaterialCommunityIcons name="chevron-left" size={32} color="white" />
               <Text style={styles.backButtonText}>Kembali</Text>
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Cicilan</Text>
-            <Text style={styles.headerSubtitle}>Catat Semua Cicilan Yang Kamu Punya Seperti Cicilan Rumah,crypto,atau lainya</Text>
+            <Text style={styles.headerTitle}>Target</Text>
+            <Text style={styles.headerSubtitle}>Catat Semua tujuan keuangan yang kamu punya , seperti traveling, atau lainya</Text>
           </View>
 
           <View style={styles.contentContainer}>
@@ -106,14 +106,14 @@ const TambahTargetScreen = ({ navigation }) => {
                     
 
               <LabeledInput 
-                label="Kategori:"
-                placeholder="Gaji, Bonus, Lainnya"
+                label="Nama Target"
+                placeholder="Traveling Dan Lainya"
                 value={kategori}
                 onChangeText={setKategori}
               />
               <LabeledInput 
-                label="Sumber Dana"
-                placeholder="Gaji, Bonus, Lainnya"
+                label="Total Target"
+                placeholder="Rp"
                 value={sumberDana}
                 onChangeText={setSumberDana}
               />

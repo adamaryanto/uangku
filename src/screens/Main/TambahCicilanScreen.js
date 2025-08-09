@@ -106,14 +106,14 @@ const TambahCicilanScreen = ({ navigation }) => {
                     
 
               <LabeledInput 
-                label="Kategori:"
-                placeholder="Gaji, Bonus, Lainnya"
+                label="Nama Cicilan: "
+                placeholder="Iphone 12"
                 value={kategori}
                 onChangeText={setKategori}
               />
               <LabeledInput 
-                label="Sumber Dana"
-                placeholder="Gaji, Bonus, Lainnya"
+                label="Total Cicilan: "
+                placeholder="Rp"
                 value={sumberDana}
                 onChangeText={setSumberDana}
               />
