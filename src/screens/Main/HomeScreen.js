@@ -15,16 +15,21 @@ const transactions = [
   { id: '8', type: 'Transfer', category: 'Transfer saldo', description: 'Tunai - BCA', amount: 600000, date: '01-01-2025', icon: 'swap-horizontal-circle-outline' },
 ];
 
-// Helper untuk format mata uang
-const formatCurrency = (number) => {
-  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
-};
 
-const formatNumber = (number) => {
-    return number.toLocaleString('id-ID') + ',00';
-}
 
-const HomeScreen = ({ navigation }) => {
+const HomeScreen = ({ navigation,isVisible,onClose }) => {
+  // Helper untuk format mata uang
+  const formatCurrency = (number) => {
+    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
+  };
+  
+  const formatNumber = (number) => {
+      return number.toLocaleString('id-ID') + ',00';
+  }
+  const handleNavigate = (screenName) => {
+    setIsMenuVisible(false); // Tutup menu terlebih dahulu
+      navigation.navigate(screenName); // Pindah ke layar yang dituju
+    };
   const [showAllTransactions, setShowAllTransactions] = useState(false);
   // Komponen untuk setiap item transaksi
   const [isMenuVisible, setIsMenuVisible] = useState(false);
@@ -40,7 +45,7 @@ const HomeScreen = ({ navigation }) => {
     if (isExpense) typeColor = '#E74C3C';
 
     // Menghilangkan garis pemisah untuk item terakhir
-    const itemStyle = index === transactions.length - 1 ? styles.transactionItem : [styles.transactionItem, styles.transactionItemBorder];
+    const itemStyle = index === transactions.length - 3 ? styles.transactionItem : [styles.transactionItem, styles.transactionItemBorder];
 
     return (
       <TouchableOpacity style={itemStyle}>
@@ -228,33 +233,31 @@ const HomeScreen = ({ navigation }) => {
       >
         <Pressable style={styles.modalOverlay} onPress={() => setIsMenuVisible(false)}>
           <View style={styles.menuContainer}>
-            {/* Tombol Aksi */}
             <View style={styles.actionRow}>
-              <Text style={[styles.actionLabel,{backgroundColor: '#727272'}]}>Riwayat Transaksi</Text>
-              <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#727272'}]}>
+              <Text style={styles.actionLabel}>Riwayat Transaksi</Text>
+              <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#6c757d'}]} onPress={() => handleNavigate('History')}>
                 <MaterialCommunityIcons name="history" size={24} color="white" />
               </TouchableOpacity>
             </View>
             <View style={styles.actionRow}>
-              <Text style={[styles.actionLabel,{backgroundColor: '#005AE0'}]}>Pindah Dana</Text>
-              <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#005AE0'}]}>
+              <Text style={styles.actionLabel}>Pindah Dana</Text>
+              <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#007bff'}]} onPress={() => handleNavigate('TransferSaldo')}>
                 <MaterialCommunityIcons name="swap-horizontal" size={24} color="white" />
               </TouchableOpacity>
             </View>
             <View style={styles.actionRow}>
-              <Text style={[styles.actionLabel,{backgroundColor: '#FF4560'}]}>Uang Keluar</Text>
-              <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#FF4560'}]}>
+              <Text style={styles.actionLabel}>Uang Keluar</Text>
+              <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#dc3545'}]} onPress={() => handleNavigate('PengeluaranSaldo')}>
                 <MaterialCommunityIcons name="arrow-down-bold-box" size={24} color="white" />
               </TouchableOpacity>
             </View>
             <View style={styles.actionRow}>
-              <Text style={[styles.actionLabel,{backgroundColor: '#00C7AF'}]}>Uang Masuk</Text>
-              <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#00C7AF'}]}>
+              <Text style={styles.actionLabel}>Uang Masuk</Text>
+              <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#28a745'}]} onPress={() => handleNavigate('PemasukanSaldo')}>
                 <MaterialCommunityIcons name="arrow-up-bold-box" size={24} color="white" />
               </TouchableOpacity>
             </View>
             
-            {/* Tombol Tutup */}
             <TouchableOpacity style={styles.closeButton} onPress={() => setIsMenuVisible(false)}>
               <MaterialCommunityIcons name="close" size={32} color="#005AE0" />
             </TouchableOpacity>

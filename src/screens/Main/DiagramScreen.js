@@ -1,10 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, ImageBackground } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Alert,ImageBackground } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 // --- DIHAPUS --- MaterialCommunityIcons tidak digunakan di layar ini
 import { PieChart } from 'react-native-svg-charts';
 import { Dimensions } from 'react-native';
-
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 const screenWidth = Dimensions.get('window').width;
 // --- DATA STATIS (Nantinya akan dari API) ---
 const chartData = [
@@ -41,6 +41,11 @@ const formatCurrency = (number) => {
 
 const DiagramScreen = ({ navigation }) => {
 
+  const handleDownloadPdf = () => {
+        // Logika sementara
+        Alert.alert('Download PDF', 'Fitur untuk mengunduh laporan PDF akan segera hadir!');
+    };
+
     const Legend = () => (
         <View style={styles.legendContainer}>
             {chartData.map(item => (
@@ -69,8 +74,14 @@ const DiagramScreen = ({ navigation }) => {
               </ImageBackground>
 
       <View style={styles.contentContainer} showsVerticalScrollIndicator={false}>
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Periode Transaksi :</Text>
+           <View style={styles.card}>
+            {/* --- DIUBAH --- Judul dan tombol sekarang dibungkus dalam satu View --- */}
+            <View style={styles.cardHeader}>
+                <Text style={styles.cardTitle}>Periode Transaksi :</Text>
+                <TouchableOpacity style={styles.downloadButton} onPress={handleDownloadPdf}>
+                    <Text style={styles.downloadButtonText}>Export Pdf</Text>
+                </TouchableOpacity>
+            </View>
             <View style={styles.dateContainer}>
                 <TouchableOpacity style={styles.datePicker}>
                     <Text style={styles.dateLabel}>Dari tanggal :</Text>
@@ -157,12 +168,17 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
+  },cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
   },
   cardTitle: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: 'bold',
-    color: '#111',
-    marginBottom: 10,
+    color: '#333',
+    // marginBottom dihapus dari sini
   },
   dateContainer: {
     flexDirection: 'row',
@@ -233,6 +249,24 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#005AE0',
   },
+   downloadButtonText: {
+  backgroundColor: 'red',
+  paddingVertical: 7,
+  paddingHorizontal: 10,
+  borderRadius: 5,
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  elevation: 3,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.1,
+  shadowRadius: 4,
+  color:'white',
+}
+
+
+
 });
 
 export default DiagramScreen;

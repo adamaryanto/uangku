@@ -25,8 +25,11 @@ import SuccessRegisScreen from '../screens/auth/SuccesRegisScreen';
 // --- Main Application Screens ---
 // Layar utama setelah pengguna berhasil login
 import ApplicationDescriptionScreen from '../screens/ApplicationDescriptionScreen';
-import HomeScreen from '../screens/Main/HomeScreen';
 
+
+import TransferSaldoScreen from '../screens/Main/TransferSaldoScreen';
+import PengeluaranSaldoScreen from '../screens/Main/PengeluaranSaldoScreen';
+import PemasukanSaldoScreen from '../screens/Main/PemasukanSaldoScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -56,14 +59,13 @@ const AppNavigator = () => {
           {/* Anda bisa menambahkan layar sukses lainnya di sini jika perlu */}
         </Stack.Group>
 
+          <Stack.Screen name="ApplicationDescription" component={ApplicationDescriptionScreen} />
         {/* GRUP 3: Alur Aplikasi Utama (Setelah Login) */}
         <Stack.Group>
-          <Stack.Screen name="ApplicationDescription" component={ApplicationDescriptionScreen} />
-          <Stack.Screen name="Home" component={TabNavigator} />
-          <Stack.Screen name="TargetScreen" component={TabNavigator} />
-          <Stack.Screen name="CicilanScreen" component={TabNavigator} />
-          <Stack.Screen name="DiagramScreen" component={TabNavigator} />
-          <Stack.Screen name="PengaturanScreen" component={TabNavigator} />
+          <Stack.Screen name="MainTabs" component={TabNavigator} />
+          <Stack.Screen name="TransferSaldo" component={TransferSaldoScreen} />
+          <Stack.Screen name="PengeluaranSaldo" component={PengeluaranSaldoScreen} />
+          <Stack.Screen name="PemasukanSaldo" component={PemasukanSaldoScreen} />
           {/* Layar-layar utama lainnya seperti Profile, Settings, dll. akan masuk di sini */}
         </Stack.Group>
 

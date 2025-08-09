@@ -29,7 +29,7 @@ const WelcomeScreen = ({ navigation,route }) => {
         {/* Tombol Lanjut diposisikan di bawah */}
         <TouchableOpacity
           style={styles.button}
-          onPress={() => navigation.replace('Home')} // Ganti ke Home, agar tidak bisa kembali ke sini
+          onPress={() => navigation.replace('MainTabs')} // Ganti ke Home, agar tidak bisa kembali ke sini
         >
           <Text style={styles.buttonText}>Lanjut  →</Text>
         </TouchableOpacity>
