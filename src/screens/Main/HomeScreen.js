@@ -1,39 +1,31 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, FlatList, TouchableOpacity,ImageBackground,Modal, Pressable  } from 'react-native';
+import React, { useState, useContext } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, FlatList, TouchableOpacity, ImageBackground, Modal, Pressable } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTransactions } from '../../contexts/TransactionsContext';
 
-// --- DATA STATIS (Nantinya akan dari API) ---
-const transactions = [
-  { id: '1', type: 'Pemasukan', category: 'Gaji', amount: 4000000, date: '01-01-2025', icon: 'briefcase-outline' },
-  { id: '2', type: 'Pengeluaran', category: 'Makan', amount: 600000, date: '01-01-2025', icon: 'arrow-down-circle-outline' },
-  { id: '3', type: 'Transfer', category: 'Transfer saldo', description: 'Tunai - BCA', amount: 600000, date: '01-01-2025', icon: 'swap-horizontal-circle-outline' },
-  { id: '4', type: 'Transfer', category: 'Transfer saldo', description: 'Tunai - BCA', amount: 600000, date: '01-01-2025', icon: 'swap-horizontal-circle-outline' },
-  { id: '5', type: 'Transfer', category: 'Transfer saldo', description: 'Tunai - BCA', amount: 600000, date: '01-01-2025', icon: 'swap-horizontal-circle-outline' },
-  { id: '6', type: 'Transfer', category: 'Transfer saldo', description: 'Tunai - BCA', amount: 600000, date: '01-01-2025', icon: 'swap-horizontal-circle-outline' },
-  { id: '7', type: 'Transfer', category: 'Transfer saldo', description: 'Tunai - BCA', amount: 600000, date: '01-01-2025', icon: 'swap-horizontal-circle-outline' },
-  { id: '8', type: 'Transfer', category: 'Transfer saldo', description: 'Tunai - BCA', amount: 600000, date: '01-01-2025', icon: 'swap-horizontal-circle-outline' },
-];
-
-
-
-const HomeScreen = ({ navigation,isVisible,onClose }) => {
+const HomeScreen = ({ navigation, isVisible, onClose }) => {
+  const { transactions, getTotalBalance, getTotalIncome, getTotalExpense } = useTransactions();
+  const [showAllTransactions, setShowAllTransactions] = useState(false);
+  
   // Helper untuk format mata uang
   const formatCurrency = (number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
   };
   
   const formatNumber = (number) => {
-      return number.toLocaleString('id-ID') + ',00';
-  }
+    return number.toLocaleString('id-ID') + ',00';
+  };
+
   const handleNavigate = (screenName) => {
-    setIsMenuVisible(false); // Tutup menu terlebih dahulu
-      navigation.navigate(screenName); // Pindah ke layar yang dituju
-    };
-  const [showAllTransactions, setShowAllTransactions] = useState(false);
-  // Komponen untuk setiap item transaksi
+    setIsMenuVisible(false);
+    navigation.navigate(screenName);
+  };
+
   const [isMenuVisible, setIsMenuVisible] = useState(false);
- const renderTransactionItem = ({ item, index }) => {
+
+  // Komponen untuk setiap item transaksi
+  const renderTransactionItem = ({ item, index }) => {
     const isIncome = item.type === 'Pemasukan';
     const isExpense = item.type === 'Pengeluaran';
     const amountColor = isIncome ? '#27AE60' : (isExpense ? '#E74C3C' : '#3498DB');
@@ -45,16 +37,18 @@ const HomeScreen = ({ navigation,isVisible,onClose }) => {
     if (isExpense) typeColor = '#E74C3C';
 
     // Menghilangkan garis pemisah untuk item terakhir
-    const itemStyle = index === transactions.length - 3 ? styles.transactionItem : [styles.transactionItem, styles.transactionItemBorder];
+    const itemStyle = index === transactions.length - 1 ? styles.transactionItem : [styles.transactionItem, styles.transactionItemBorder];
 
     return (
-      <TouchableOpacity style={itemStyle}>
+      <TouchableOpacity style={itemStyle} key={item.id}>
         <View style={styles.transactionIconContainer}>
-          {/* Ukuran ikon dikecilkan */}
-          <MaterialCommunityIcons name={item.icon} size={24} color="#005AE0" />
+          <MaterialCommunityIcons 
+            name={item.icon || (isIncome ? 'cash-plus' : isExpense ? 'cash-minus' : 'swap-horizontal')} 
+            size={24} 
+            color={typeColor} 
+          />
         </View>
         <View style={styles.transactionDetails}>
-          {/* --- DIUBAH --- Menambahkan teks tipe transaksi --- */}
           <Text style={[styles.transactionType, { color: typeColor }]}>{item.type}</Text>
           <Text style={styles.transactionCategory}>{item.category}</Text>
           {item.description && <Text style={styles.transactionDescription}>{item.description}</Text>}
@@ -65,88 +59,39 @@ const HomeScreen = ({ navigation,isVisible,onClose }) => {
           </Text>
           <Text style={styles.transactionDate}>Tanggal: {item.date}</Text>
         </View>
-        {/* Ukuran ikon dikecilkan */}
         <MaterialCommunityIcons name="chevron-right" size={22} color="#A9A9A9" />
       </TouchableOpacity>
     );
   };
- const transactionsToShow = showAllTransactions ? transactions : transactions.slice(0, 3);
 
- const ListHeader = () => (
-    <>
-      <View style={styles.datePickerContainer}>
-          <Text style={styles.datePickerLabel}>Tanggal:</Text>
-          <TouchableOpacity style={styles.datePickerButton}>
-          <Text style={styles.datePickerText}>31-07-2025</Text>
-          <MaterialCommunityIcons name="calendar-month-outline" size={24} color="#333" />
-          </TouchableOpacity>
-      </View>
-
-      <View style={styles.totalBalanceCard}>
-          <Text style={styles.totalBalanceLabel}>Total dana transaksi :</Text>
-          <Text style={styles.totalBalanceAmount}>Rp. 3.400.000,00</Text>
-      </View>
-
-      <View style={styles.summaryCardContainer}>
-          <View style={styles.summaryCard}>
-            <MaterialCommunityIcons style={styles.summaryIcon} name="arrow-top-right-thin-circle-outline" size={24} color="#27AE60" />
-            <Text style={styles.summaryLabel}>Pemasukan :</Text>
-            <View>
-                <Text style={[styles.summaryCurrency, { color: '#27AE60' }]}>+Rp.</Text>
-                <Text style={[styles.summaryAmountValue, { color: '#27AE60' }]}>{formatNumber(4000000)}</Text>
-            </View>
-          </View>
-          <View style={styles.summaryCard}>
-            <MaterialCommunityIcons style={styles.summaryIcon} name="arrow-bottom-left-thin-circle-outline" size={24} color="#E74C3C" />
-            <Text style={styles.summaryLabel}>Pengeluaran :</Text>
-            <View>
-                <Text style={[styles.summaryCurrency, { color: '#E74C3C' }]}>-Rp.</Text>
-                <Text style={[styles.summaryAmountValue, { color: '#E74C3C' }]}>{formatNumber(600000)}</Text>
-            </View>
-          </View>
-      </View>
-      
-      <View style={styles.summaryCardContainer}>
-        <View style={styles.summaryCard}>
-          <MaterialCommunityIcons style={styles.summaryIcon} name="swap-horizontal" size={24} color="#3498DB" />
-          <Text style={styles.summaryLabel}>Pindah dana</Text>
-          <Text style={[styles.summaryAmount, { color: '#3498DB' }]}>Rp. 600.000,00</Text>
-        </View>
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>Jumlah Transaksi</Text>
-          <Text style={[styles.summaryAmount, { color: '#F39C12', fontSize: 24, fontWeight: 'bold' }]}>3X</Text>
-        </View>
-      </View>
-
-      <Text style={styles.transactionListTitle}>Transaksi anda hari ini</Text>
-    </>
-  );
+  const transactionsToShow = showAllTransactions ? transactions : transactions.slice(0, 3);
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
-      
-
-      {/* --- Bagian Header Biru --- */}
-
-      <ScrollView showsVerticalScrollIndicator={false}>
-        
-      
+      <ScrollView>
       <ImageBackground
-  source={require('../../assets/image.png')}
-  style={styles.headerContainer}
-  imageStyle={styles.headerBackgroundImage}
->
-  <Text style={styles.headerTitle}>Catat Pemasukan {'\n'}& Pengeluaran Anda</Text>
-  <Text style={styles.headerSubtitle}>Semua transaksi kamu, di sini tempatnya.</Text>
-</ImageBackground>
-      {/* --- Konten Utama Putih --- */}
-      <View style={styles.contentContainer} showsVerticalScrollIndicator={false}>
+        source={require('../../assets/image.png')}
+        style={styles.headerContainer}
+        imageStyle={styles.headerBackgroundImage}
+      >
+        <Text style={styles.headerTitle}>Catat Pemasukan {'\n'}& Pengeluaran Anda</Text>
+        <Text style={styles.headerSubtitle}>Semua transaksi kamu, di sini tempatnya.</Text>
+      </ImageBackground>
+
+      <View showsVerticalScrollIndicator={false}>
+        <View style={styles.contentContainer}>
           {/* Date Picker */}
           <View style={styles.datePickerContainer}>
             <Text style={styles.datePickerLabel}>Tanggal:</Text>
             <TouchableOpacity style={styles.datePickerButton}>
-              <Text style={styles.datePickerText}>31-07-2025</Text>
+              <Text style={styles.datePickerText}>
+                {new Date().toLocaleDateString('id-ID', {
+                  day: '2-digit',
+                  month: 'long',
+                  year: 'numeric'
+                })}
+              </Text>
               <MaterialCommunityIcons name="calendar-month-outline" size={24} color="#333" />
             </TouchableOpacity>
           </View>
@@ -154,77 +99,91 @@ const HomeScreen = ({ navigation,isVisible,onClose }) => {
           {/* Kartu Total Dana */}
           <View style={styles.totalBalanceCard}>
             <Text style={styles.totalBalanceLabel}>Total dana transaksi :</Text>
-            <Text style={styles.totalBalanceAmount}>Rp. 3.400.000,00</Text>
+            <Text style={styles.totalBalanceAmount}>{formatCurrency(getTotalBalance())}</Text>
           </View>
 
           {/* Kartu Ringkasan (Pemasukan & Pengeluaran) */}
           <View style={styles.summaryCardContainer}>
-              <View style={styles.summaryCard}>
-                
-                <Text style={styles.summaryLabel}>Pemasukan : <MaterialCommunityIcons name="arrow-top-right-thin-circle-outline" size={24} color="#27AE60" /></Text>
-                <View>
-                    
-                    <Text style={[styles.summaryAmount, { color: '#27AE60' }]}>Rp.{formatNumber(4000000)}</Text>
-                </View>
+            <View style={styles.summaryCard}>
+              <Text style={styles.summaryLabel}>
+                Pemasukan : <MaterialCommunityIcons name="arrow-top-right-thin-circle-outline" size={24} color="#27AE60" />
+              </Text>
+              <View>
+                <Text style={[styles.summaryAmount, { color: '#27AE60' }]}>Rp.{formatNumber(getTotalIncome())}</Text>
               </View>
-              <View style={styles.summaryCard}>
-                
-                <Text style={styles.summaryLabel}>Pengeluaran : <MaterialCommunityIcons name="arrow-bottom-left-thin-circle-outline" size={24} color="#E74C3C" /></Text>
-                <View>
-                    
-                    <Text style={[styles.summaryAmount, { color: '#E74C3C' }]}>-Rp.{formatNumber(600000)}</Text>
-                </View>
+            </View>
+            <View style={styles.summaryCard}>
+              <Text style={styles.summaryLabel}>
+                Pengeluaran : <MaterialCommunityIcons name="arrow-bottom-left-thin-circle-outline" size={24} color="#E74C3C" />
+              </Text>
+              <View>
+                <Text style={[styles.summaryAmount, { color: '#E74C3C' }]}>-Rp.{formatNumber(getTotalExpense())}</Text>
               </View>
+            </View>
           </View>
 
           {/* Kartu Ringkasan (Pindah Dana & Jumlah Transaksi) */}
           <View style={styles.summaryCardContainer}>
             <View style={styles.summaryCard}>
-              
-              <Text style={styles.summaryLabel}>Pindah dana <MaterialCommunityIcons name="swap-horizontal" size={24} color="#3498DB" /></Text>
-              <Text style={[styles.summaryAmount, { color: '#3498DB' }]}>Rp. 600.000,00</Text>
+              <Text style={styles.summaryLabel}>
+                Pindah dana <MaterialCommunityIcons name="swap-horizontal" size={24} color="#3498DB" />
+              </Text>
+              <Text style={[styles.summaryAmount, { color: '#3498DB' }]}>Rp. 0</Text>
             </View>
             <View style={styles.summaryCard}>
               <Text style={styles.summaryLabel}>Jumlah Transaksi</Text>
-              <Text style={[styles.summaryAmount, { color: '#F39C12', fontSize: 24, fontWeight: 'bold' }]}>3X</Text>
+              <Text style={[styles.summaryAmount, { color: '#F39C12', fontSize: 24, fontWeight: 'bold' }]}>{transactions.length}X</Text>
             </View>
           </View>
 
           {/* Daftar Transaksi */}
           <View style={styles.transactionListCard}>
             <Text style={styles.transactionListTitle}>Transaksi anda hari ini</Text>
-            <FlatList
-                data={transactionsToShow} // --- DIUBAH --- Menggunakan data yang sudah disaring
+            
+            {transactions.length > 0 ? (
+              <FlatList
+                data={transactionsToShow}
                 renderItem={renderTransactionItem}
                 keyExtractor={item => item.id}
                 scrollEnabled={false}
-            />
-            {/* --- BARU --- Tombol "Lihat Lainnya" akan muncul jika kondisi terpenuhi */}
+              />
+            ) : (
+              <View style={styles.noTransactions}>
+                <MaterialCommunityIcons name="clipboard-text-outline" size={48} color="#A9A9A9" />
+                <Text style={styles.noTransactionsText}>Belum ada transaksi</Text>
+                <Text style={styles.noTransactionsSubtext}>Tambahkan transaksi pertama Anda</Text>
+              </View>
+            )}
+
+            {/* Tombol Lihat Lainnya */}
             {transactions.length > 3 && !showAllTransactions && (
-  <TouchableOpacity 
-    style={styles.seeMoreButton} 
-    onPress={() => setShowAllTransactions(true)}
-  >
-    <Text style={styles.seeMoreText}>Lihat Lainnya</Text>
-  </TouchableOpacity>
-)}
+              <TouchableOpacity 
+                style={styles.seeMoreButton} 
+                onPress={() => setShowAllTransactions(true)}
+              >
+                <Text style={styles.seeMoreText}>Lihat Lainnya</Text>
+              </TouchableOpacity>
+            )}
 
-{showAllTransactions && (
-  <TouchableOpacity 
-    style={styles.seeMoreButton} 
-    onPress={() => setShowAllTransactions(false)}
-  >
-    <Text style={styles.seeMoreText}>Tampilkan Lebih Sedikit</Text>
-  </TouchableOpacity>
-)}
-
+            {showAllTransactions && (
+              <TouchableOpacity 
+                style={styles.seeMoreButton} 
+                onPress={() => setShowAllTransactions(false)}
+              >
+                <Text style={styles.seeMoreText}>Tampilkan Lebih Sedikit</Text>
+              </TouchableOpacity>
+            )}
           </View>
+        </View>
       </View>
       </ScrollView>
+
       {/* Tombol Tambah (Floating Action Button) */}
       <TouchableOpacity style={styles.fab} onPress={() => setIsMenuVisible(true)}>
         <MaterialCommunityIcons name="plus" size={32} color="#FEB019" />
       </TouchableOpacity>
+
+      {/* Modal Menu */}
       <Modal
         animationType="fade"
         transparent={true}
@@ -267,7 +226,6 @@ const HomeScreen = ({ navigation,isVisible,onClose }) => {
     </SafeAreaView>
   );
 };
-
 
 const styles = StyleSheet.create({
   container: {
@@ -492,6 +450,21 @@ seeMoreText: {
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 1, // Jarak dari tombol aksi terakhir
+  },
+  noTransactions: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  noTransactionsText: {
+    fontSize: 18,
+    color: '#333',
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  noTransactionsSubtext: {
+    fontSize: 14,
+    color: '#666',
   },
 });
 

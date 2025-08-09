@@ -25,7 +25,7 @@ import SuccessRegisScreen from '../screens/auth/SuccesRegisScreen';
 // --- Main Application Screens ---
 // Layar utama setelah pengguna berhasil login
 import ApplicationDescriptionScreen from '../screens/ApplicationDescriptionScreen';
-
+import SplashScreen from '../screens/SplashScreen';
 
 import TransferSaldoScreen from '../screens/Main/TransferSaldoScreen';
 import PengeluaranSaldoScreen from '../screens/Main/PengeluaranSaldoScreen';
@@ -38,11 +38,12 @@ const AppNavigator = () => {
     <NavigationContainer>
       {/* Terapkan screenOptions ke semua layar di dalam navigator ini */}
       <Stack.Navigator 
-        initialRouteName="ApplicationDescription" 
+        initialRouteName="SplashScreen" 
         screenOptions={{ headerShown: false }}
       >
         {/* GRUP 1: Alur Otentikasi Pengguna */}
         <Stack.Group>
+          <Stack.Screen name="SplashScreen" component={SplashScreen} />
           <Stack.Screen name="Welcome" component={WelcomeScreen} />
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />

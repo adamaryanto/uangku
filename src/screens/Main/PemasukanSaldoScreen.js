@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, TextInput, Alert, ImageBackground } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTransactions } from '../../contexts/TransactionsContext';
 
 // Komponen Input Kustom
 const LabeledInput = ({ label, placeholder, value, onChangeText, keyboardType = 'default' }) => (
@@ -19,87 +20,128 @@ const LabeledInput = ({ label, placeholder, value, onChangeText, keyboardType = 
 );
 
 const PemasukanSaldoScreen = ({ navigation }) => {
+  const [kategori, setKategori] = useState('');
   const [sumberDana, setSumberDana] = useState('');
-  const [tujuan, setTujuan] = useState('');
   const [jumlah, setJumlah] = useState('');
   const [catatan, setCatatan] = useState('');
+  
+  const { addTransaction } = useTransactions();
 
   const handleSave = () => {
-    if (!sumberDana || !tujuan || !jumlah) {
-      Alert.alert('Error', 'Sumber dana, tujuan, dan jumlah wajib diisi.');
+    if (!kategori || !sumberDana || !jumlah) {
+      Alert.alert('Error', 'Kategori, sumber dana, dan jumlah wajib diisi.');
       return;
     }
-    console.log('Menyimpan transfer:', { sumberDana, tujuan, jumlah, catatan });
-    Alert.alert('Sukses', 'Transfer saldo berhasil dicatat.', [
+
+    const amount = parseFloat(jumlah.replace(/\./g, '').replace(',', '.'));
+    
+    if (isNaN(amount) || amount <= 0) {
+      Alert.alert('Error', 'Jumlah harus berupa angka yang valid dan lebih dari 0');
+      return;
+    }
+
+    const newTransaction = {
+      type: 'Pemasukan',
+      category: kategori,
+      amount: amount,
+      description: catatan || `Pemasukan dari ${sumberDana}`,
+      icon: 'cash-plus',
+      source: sumberDana
+    };
+
+    addTransaction(newTransaction);
+    
+    Alert.alert('Sukses', 'Pemasukan berhasil dicatat.', [
       { text: 'OK', onPress: () => navigation.goBack() }
     ]);
   };
 
+  // Format input jumlah dengan titik sebagai pemisah ribuan
+  const formatCurrencyInput = (text) => {
+    // Hapus semua karakter selain angka
+    const numericValue = text.replace(/[^0-9]/g, '');
+    
+    // Format dengan titik sebagai pemisah ribuan
+    const formattedValue = numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    
+    return formattedValue;
+  };
+
   return (
     <ImageBackground
-        source={require('../../assets/image.png')}
-        style={styles.container}
+      source={require('../../assets/image.png')}
+      style={styles.container}
     >
-        <SafeAreaView style={styles.safeArea}>
-            <StatusBar style="light" />
-            <ScrollView showsVerticalScrollIndicator={false}>
-                {/* Header sekarang adalah View transparan di dalam ScrollView */}
-                <View style={styles.headerContainer}>
-                    <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-                        <MaterialCommunityIcons name="chevron-left" size={32} color="white" />
-                        <Text style={styles.backButtonText}>Kembali</Text>
-                    </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Pemasukan Saldo</Text>
-                    <Text style={styles.headerSubtitle}>Catat Semua pendapatan yang kamu terima,sperti gaji,bonus,atau sumber lainya</Text>
-                </View>
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar style="light" />
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <View style={styles.headerContainer}>
+            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+              <MaterialCommunityIcons name="chevron-left" size={32} color="white" />
+              <Text style={styles.backButtonText}>Kembali</Text>
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Pemasukan Saldo</Text>
+            <Text style={styles.headerSubtitle}>Catat Semua pendapatan yang kamu terima, seperti gaji, bonus, atau sumber lainya</Text>
+          </View>
 
-                {/* Konten form */}
-                <View style={styles.contentContainer}>
-                    <View style={styles.formCard}>
-                        <View style={styles.dateRow}>
-                            <TouchableOpacity style={styles.datePicker}>
-                                <Text style={styles.dateValue}>Senin, 09 Jan 2025</Text>
-                                <MaterialCommunityIcons name="calendar-month-outline" size={24} color="#333" />
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.timePicker}>
-                                <Text style={styles.timeValue}>11:04</Text>
-                            </TouchableOpacity>
-                        </View>
+          <View style={styles.contentContainer}>
+            <View style={styles.formCard}>
+              <View style={styles.dateRow}>
+                <TouchableOpacity style={styles.datePicker}>
+                  <Text style={styles.dateValue}>
+                    {new Date().toLocaleDateString('id-ID', {
+                      weekday: 'long',
+                      day: '2-digit',
+                      month: 'long',
+                      year: 'numeric'
+                    })}
+                  </Text>
+                  <MaterialCommunityIcons name="calendar-month-outline" size={24} color="#333" />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.timePicker}>
+                  <Text style={styles.timeValue}>
+                    {new Date().toLocaleTimeString('id-ID', {
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </Text>
+                </TouchableOpacity>
+              </View>
 
-                        <LabeledInput 
-                            label="Kategori:"
-                            placeholder="Makanan, Transportasi"
-                            value={sumberDana}
-                            onChangeText={setSumberDana}
-                        />
-                        <LabeledInput 
-                            label="Sumber Dana"
-                            placeholder="Uang Tunai,Bank"
-                            value={tujuan}
-                            onChangeText={setTujuan}
-                        />
-                        <LabeledInput 
-                            label="Jumlah"
-                            placeholder="Rp"
-                            value={jumlah}
-                            onChangeText={setJumlah}
-                            keyboardType="numeric"
-                        />
-                        <LabeledInput 
-                            label="Catatan"
-                            placeholder="Catatan"
-                            value={catatan}
-                            onChangeText={setCatatan}
-                        />
+              <LabeledInput 
+                label="Kategori:"
+                placeholder="Gaji, Bonus, Lainnya"
+                value={kategori}
+                onChangeText={setKategori}
+              />
+              <LabeledInput 
+                label="Sumber Dana"
+                placeholder="Gaji, Bonus, Lainnya"
+                value={sumberDana}
+                onChangeText={setSumberDana}
+              />
+              <LabeledInput 
+                label="Jumlah"
+                placeholder="0"
+                value={formatCurrencyInput(jumlah)}
+                onChangeText={(text) => setJumlah(text.replace(/\./g, ''))}
+                keyboardType="numeric"
+              />
+              <LabeledInput 
+                label="Catatan"
+                placeholder="Tambah catatan (opsional)"
+                value={catatan}
+                onChangeText={setCatatan}
+              />
 
-                        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-                            <MaterialCommunityIcons name="content-save-outline" size={22} color="white" style={{marginRight: 10}} />
-                            <Text style={styles.saveButtonText}>Menyimpan</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-            </ScrollView>
-        </SafeAreaView>
+              <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+                <MaterialCommunityIcons name="content-save-outline" size={22} color="white" style={{marginRight: 10}} />
+                <Text style={styles.saveButtonText}>Simpan</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
     </ImageBackground>
   );
 };

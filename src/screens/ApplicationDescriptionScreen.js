@@ -87,9 +87,12 @@ const styles = StyleSheet.create({
     textAlign:'center',
   },
   tagline: {
-    fontSize: 16,
+    fontSize: 13,
+    borderBottomWidth:2,
+    borderBottomColor:'#FEB019',
     color: 'white',
-    fontStyle: 'italic',
+    fontWeight:'bold',
+    
   },
   underline: {
     height: 2,
