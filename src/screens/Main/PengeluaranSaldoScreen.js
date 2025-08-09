@@ -1,11 +1,13 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, TextInput, Alert, ImageBackground, Image } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, TextInput, Alert, ImageBackground, Image, Animated, Easing } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import { createWorker } from 'tesseract.js';
 import { useTransactions } from '../../contexts/TransactionsContext';
+
+import Tesseract from 'tesseract.js';
 
 // Komponen Input Kustom
 const LabeledInput = ({ label, placeholder, value, onChangeText, keyboardType = 'default' }) => (
@@ -31,95 +33,8 @@ const PengeluaranSaldoScreen = ({ navigation }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const { addTransaction } = useTransactions();
 
-  const pickImage = async () => {
-    try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Izin diperlukan', 'Kami membutuhkan izin untuk mengakses galeri untuk memilih gambar.');
-        return;
-      }
 
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: false,
-        quality: 0.8,
-      });
-
-      if (!result.canceled) {
-        setSelectedImage(result.assets[0].uri);
-        processImage(result.assets[0].uri);
-      }
-    } catch (error) {
-      console.error('Error picking image:', error);
-      Alert.alert('Error', 'Terjadi kesalahan saat memilih gambar.');
-    }
-  };
-
-  const takePhoto = async () => {
-    try {
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Izin diperlukan', 'Kami membutuhkan izin kamera untuk mengambil foto.');
-        return;
-      }
-
-      const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: false,
-        quality: 0.8,
-      });
-
-      if (!result.canceled) {
-        setSelectedImage(result.assets[0].uri);
-        processImage(result.assets[0].uri);
-      }
-    } catch (error) {
-      console.error('Error taking photo:', error);
-      Alert.alert('Error', 'Terjadi kesalahan saat mengambil foto.');
-    }
-  };
-
-  const processImage = async (imageUri) => {
-    setIsProcessing(true);
-    try {
-      const worker = await createWorker({
-        logger: m => console.log(m)
-      });
-      
-      await worker.loadLanguage('eng+ind');
-      await worker.initialize('eng+ind');
-      const { data: { text } } = await worker.recognize(imageUri);
-      await worker.terminate();
-      
-      // Ekstrak angka dari teks
-      const numbers = text.match(/\d+([.,]\d+)*/g);
-      if (numbers && numbers.length > 0) {
-        // Ambil angka terbesar yang ditemukan
-        const largestNumber = numbers.reduce((a, b) => {
-          const numA = parseFloat(a.replace(/\./g, '').replace(',', '.'));
-          const numB = parseFloat(b.replace(/\./g, '').replace(',', '.'));
-          return numA > numB ? a : b;
-        });
-        
-        // Format angka sesuai format uang Indonesia
-        const formattedNumber = largestNumber
-          .replace(/\./g, 'x')
-          .replace(/,/g, '.')
-          .replace(/x/g, '');
-          
-        setJumlah(formattedNumber);
-        Alert.alert('Berhasil', 'Jumlah berhasil diekstrak dari gambar.');
-      } else {
-        Alert.alert('Info', 'Tidak dapat menemukan angka pada gambar.');
-      }
-    } catch (error) {
-      console.error('Error processing image:', error);
-      Alert.alert('Error', 'Gagal memproses gambar. Pastikan teks terlihat jelas.');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
+ 
   const handleSave = () => {
     if (!kategori || !sumberDana || !jumlah) {
       Alert.alert('Error', 'Kategori, sumber dana, dan jumlah wajib diisi.');
@@ -232,45 +147,7 @@ const PengeluaranSaldoScreen = ({ navigation }) => {
                 onChangeText={setCatatan}
               />
 
-              <View style={styles.ocrContainer}>
-                <Text style={styles.ocrTitle}>Pindai Struk (Opsional)</Text>
-                <Text style={styles.ocrSubtitle}>Unggah atau ambil foto struk untuk mengekstrak informasi secara otomatis</Text>
-                
-                <View style={styles.ocrButtonsContainer}>
-                  <TouchableOpacity 
-                    style={[styles.ocrButton, isProcessing && styles.ocrButtonDisabled]}
-                    onPress={pickImage}
-                    disabled={isProcessing}
-                  >
-                    <MaterialCommunityIcons name="image" size={24} color="white" />
-                    <Text style={styles.ocrButtonText}>Unggah Gambar</Text>
-                  </TouchableOpacity>
-                  
-                  <TouchableOpacity 
-                    style={[styles.ocrButton, styles.ocrButtonCamera, isProcessing && styles.ocrButtonDisabled]}
-                    onPress={takePhoto}
-                    disabled={isProcessing}
-                  >
-                    <MaterialCommunityIcons name="camera" size={24} color="white" />
-                    <Text style={styles.ocrButtonText}>Ambil Foto</Text>
-                  </TouchableOpacity>
-                </View>
-                
-                {selectedImage && (
-                  <View style={styles.previewContainer}>
-                    <Image source={{ uri: selectedImage }} style={styles.previewImage} />
-                    {isProcessing && (
-                      <View style={styles.processingOverlay}>
-                        <View style={styles.spinner}>
-                          <MaterialCommunityIcons name="loading" size={32} color="white" style={styles.spinning} />
-                        </View>
-                        <Text style={styles.processingText}>Memproses gambar...</Text>
-                      </View>
-                    )}
-                  </View>
-                )}
-              </View>
-
+             
               <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={isProcessing}>
                 <MaterialCommunityIcons name="content-save-outline" size={22} color="white" style={{marginRight: 10}} />
                 <Text style={styles.saveButtonText}>Simpan</Text>

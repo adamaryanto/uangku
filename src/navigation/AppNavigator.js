@@ -29,8 +29,9 @@ import SplashScreen from '../screens/SplashScreen';
 
 import TransferSaldoScreen from '../screens/Main/TransferSaldoScreen';
 import PengeluaranSaldoScreen from '../screens/Main/PengeluaranSaldoScreen';
+import TambahCicilanScreen from '../screens/Main/TambahCicilanScreen'
 import PemasukanSaldoScreen from '../screens/Main/PemasukanSaldoScreen';
-
+import TambahTargetScreen from '../screens/Main/TambahTargetScreen';
 const Stack = createNativeStackNavigator();
 
 const AppNavigator = () => {
@@ -67,6 +68,8 @@ const AppNavigator = () => {
           <Stack.Screen name="TransferSaldo" component={TransferSaldoScreen} />
           <Stack.Screen name="PengeluaranSaldo" component={PengeluaranSaldoScreen} />
           <Stack.Screen name="PemasukanSaldo" component={PemasukanSaldoScreen} />
+          <Stack.Screen name="TambahCicilan" component={TambahCicilanScreen} />
+          <Stack.Screen name="TambahTarget" component={TambahTargetScreen} />
           {/* Layar-layar utama lainnya seperti Profile, Settings, dll. akan masuk di sini */}
         </Stack.Group>
 

@@ -36,11 +36,16 @@ const ProgressBar = ({ progress }) => (
   </View>
 );
 
-const CicilanScreen = () => {
+const CicilanScreen = ({ navigation }) => {
+  
   const [showAllTargets, setShowAllTargets] = React.useState(false);
-   const [isMenuVisible, setIsMenuVisible] = useState(false);
+  const [isMenuVisible, setIsMenuVisible] = useState(false);
   const targetsToShow = showAllTargets ? targets : targets.slice(0, 2);
-
+  
+  const handleNavigate = (screenName) => {
+    setIsMenuVisible(false);
+    navigation.navigate(screenName);
+  };
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
@@ -180,7 +185,7 @@ const CicilanScreen = () => {
                     
                         <View style={styles.actionRow}>
                           <Text style={[styles.actionLabel,{backgroundColor: '#00C7AF'}]}>Tambah Cicilan Baru</Text>
-                          <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#00C7AF'}]}>
+                          <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#00C7AF'}]} onPress={() => handleNavigate('TambahCicilan')}>
                             {/* Ikon diubah menjadi pensil */}
                             <MaterialCommunityIcons name="pencil-plus-outline" size={24} color="white" />
                           </TouchableOpacity>
@@ -485,7 +490,7 @@ const styles = StyleSheet.create({
   
   fab: {
     position: 'absolute',
-    bottom: 20,
+    bottom: 30,
     right: 20,
     backgroundColor: 'white',
     width: 60,
@@ -497,7 +502,7 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Background semi-transparan
+    backgroundColor: 'rgba(0, 0, 0, 0.8)', // Background semi-transparan
     justifyContent: 'flex-end',
     alignItems: 'flex-end',
     padding: 20,
@@ -509,29 +514,39 @@ const styles = StyleSheet.create({
   actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    
     marginBottom: 20,
+    width: '100%',
   },
   actionLabel: {
     
     color: 'white',
-    paddingVertical: 5,
-    paddingHorizontal: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
     borderRadius: 5,
-    marginRight: 15,
+    fontWeight: '600',
     fontSize: 14,
+    marginRight: 15,
+    textAlign: 'center',
+    minWidth: 140,
   },
   actionButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 53,
+    height: 53,
+    borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 5,
+    elevation: 3,
+    
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
   closeButton: {
     backgroundColor: 'white',
-    width: 60,
-    height: 60,
+    width: 53,
+    height: 53,
     borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',

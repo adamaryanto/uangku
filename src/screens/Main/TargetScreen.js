@@ -36,11 +36,15 @@ const ProgressBar = ({ progress }) => (
   </View>
 );
 
-const TargetScreen = () => {
+const TargetScreen = ({navigation}) => {
   const [showAllTargets, setShowAllTargets] = React.useState(false);
   const [isMenuVisible, setIsMenuVisible] = useState(false);
   const targetsToShow = showAllTargets ? targets : targets.slice(0, 2);
 
+    const handleNavigate = (screenName) => {
+    setIsMenuVisible(false);
+    navigation.navigate(screenName);
+  };
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
@@ -178,8 +182,14 @@ const TargetScreen = () => {
                   </View>
               
                   <View style={styles.actionRow}>
-                    <Text style={[styles.actionLabel,{backgroundColor: '#00C7AF'}]}>Tambah Target Baru</Text>
-                    <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#00C7AF'}]}>
+                  <Text 
+                    style={[styles.actionLabel,{backgroundColor: '#00C7AF'}]} 
+                    onPress={() => handleNavigate('TambahTarget')} 
+                  >
+                    Tambah Target Baru
+                  </Text>
+
+                    <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#00C7AF'}]} >
                       {/* Ikon diubah menjadi pensil */}
                       <MaterialCommunityIcons name="pencil-plus-outline" size={24} color="white" />
                     </TouchableOpacity>

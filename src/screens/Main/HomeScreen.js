@@ -193,26 +193,26 @@ const HomeScreen = ({ navigation, isVisible, onClose }) => {
         <Pressable style={styles.modalOverlay} onPress={() => setIsMenuVisible(false)}>
           <View style={styles.menuContainer}>
             <View style={styles.actionRow}>
-              <Text style={styles.actionLabel}>Riwayat Transaksi</Text>
-              <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#6c757d'}]} onPress={() => handleNavigate('History')}>
+              <Text style={[styles.actionLabel, {backgroundColor: '#727272'}]}>Riwayat Transaksi</Text>
+              <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#727272'}]} onPress={() => handleNavigate('History')}>
                 <MaterialCommunityIcons name="history" size={24} color="white" />
               </TouchableOpacity>
             </View>
             <View style={styles.actionRow}>
-              <Text style={styles.actionLabel}>Pindah Dana</Text>
-              <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#007bff'}]} onPress={() => handleNavigate('TransferSaldo')}>
+              <Text style={[styles.actionLabel, {backgroundColor: '#005AE0'}]}>Pindah Dana</Text>
+              <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#005AE0'}]} onPress={() => handleNavigate('TransferSaldo')}>
                 <MaterialCommunityIcons name="swap-horizontal" size={24} color="white" />
               </TouchableOpacity>
             </View>
             <View style={styles.actionRow}>
-              <Text style={styles.actionLabel}>Uang Keluar</Text>
-              <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#dc3545'}]} onPress={() => handleNavigate('PengeluaranSaldo')}>
+              <Text style={[styles.actionLabel, {backgroundColor: '#FF4560'}]}>Uang Keluar</Text>
+              <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#FF4560'}]} onPress={() => handleNavigate('PengeluaranSaldo')}>
                 <MaterialCommunityIcons name="arrow-down-bold-box" size={24} color="white" />
               </TouchableOpacity>
             </View>
             <View style={styles.actionRow}>
-              <Text style={styles.actionLabel}>Uang Masuk</Text>
-              <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#28a745'}]} onPress={() => handleNavigate('PemasukanSaldo')}>
+              <Text style={[styles.actionLabel, {backgroundColor: '#00C7AF'}]}>Uang Masuk</Text>
+              <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#00C7AF'}]} onPress={() => handleNavigate('PemasukanSaldo')}>
                 <MaterialCommunityIcons name="arrow-up-bold-box" size={24} color="white" />
               </TouchableOpacity>
             </View>
@@ -399,7 +399,7 @@ seeMoreText: {
 
   fab: {
     position: 'absolute',
-    bottom: 20,
+    bottom: 30,
     right: 20,
     backgroundColor: 'white',
     width: 60,
@@ -411,7 +411,7 @@ seeMoreText: {
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Background semi-transparan
+    backgroundColor: 'rgba(0, 0, 0, 0.8)', // Background semi-transparan
     justifyContent: 'flex-end',
     alignItems: 'flex-end',
     padding: 20,
@@ -423,29 +423,38 @@ seeMoreText: {
   actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    
     marginBottom: 20,
+    width: '100%',
   },
   actionLabel: {
-    
     color: 'white',
-    paddingVertical: 5,
-    paddingHorizontal: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
     borderRadius: 5,
-    marginRight: 15,
+    fontWeight: '600',
     fontSize: 14,
+    marginRight: 15,
+    textAlign: 'center',
+    minWidth: 140,
   },
   actionButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 53,
+    height: 53,
+    borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 5,
+    elevation: 3,
+    
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
   closeButton: {
     backgroundColor: 'white',
-    width: 60,
-    height: 60,
+    width: 53,
+    height: 53,
     borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
