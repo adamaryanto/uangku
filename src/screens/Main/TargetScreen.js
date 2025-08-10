@@ -36,11 +36,18 @@ const TargetScreen = ({navigation}) => {
   const [isMenuVisible, setIsMenuVisible] = useState(false);
   
 
-  const { targets = [], getTotalTargetAmount, getTotalSavedAmount } = useTransactions(); 
-   const targetsToShow = showAllTargets ? targets : targets.slice(0, 3);
+  const { transactions, getTotalTargetAmount, getTotalSavedAmount } = useTransactions(); 
+  
+  // Filter transactions to get only targets
+  const targets = transactions.filter(t => t.type === 'Target');
+  const targetsToShow = showAllTargets ? targets : targets.slice(0, 3);
   const totalTarget = getTotalTargetAmount();
   const totalSaved = getTotalSavedAmount();
-  const remainingTarget = totalTarget - totalSaved;
+  const remainingTarget = Math.max(0, totalTarget - totalSaved);
+  
+  // Count completed and pending targets
+  const completedTargets = targets.filter(t => t.savedAmount >= t.targetAmount).length;
+  const pendingTargets = targets.length - completedTargets;
   const renderTargetItem = ({ item }) => {
     const progress = (item.savedAmount / item.targetAmount) * 100;
     return (
@@ -93,23 +100,23 @@ const TargetScreen = ({navigation}) => {
           {/* Filter */}
           <View style={styles.filterContainer}>
             <TouchableOpacity style={[styles.filterButton, { backgroundColor: '#FEB01A' }]}>
-              <Text style={styles.filterButtonText}>
-                Target{'\n'}
-                <Text style={styles.filterButtonCount}>3</Text>
-              </Text>
+                <Text style={styles.filterButtonText}>
+                  Target{'\n'}
+                  <Text style={styles.filterButtonCount}>{targets.length}</Text>
+                </Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={[styles.filterButton, { backgroundColor: '#FF4560' }]}>
               <Text style={styles.filterButtonText}>
                 Belum Target{'\n'}
-                <Text style={styles.filterButtonCount}>3</Text>
+                <Text style={styles.filterButtonCount}>{pendingTargets}</Text>
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={[styles.filterButton, { backgroundColor: '#00C7AF' }]}>
               <Text style={styles.filterButtonText}>
                 Sudah Target{'\n'}
-                <Text style={styles.filterButtonCount}>3</Text>
+                <Text style={styles.filterButtonCount}>{completedTargets}</Text>
               </Text>
             </TouchableOpacity>
           </View>
@@ -140,7 +147,7 @@ const TargetScreen = ({navigation}) => {
           <View style={styles.allTargetsCard}>
             <Text style={styles.targetListTitle}>Target anda :</Text>
             {targetsToShow.map((item) => {
-              const progress = (item.savedAmount / item.targetAmount) * 100;
+              const progress = Math.min(100, (item.savedAmount / item.targetAmount) * 100);
               return (
                 <View key={item.id} style={styles.targetItemRow}>
                   <View style={styles.targetItemHeader}>
@@ -153,7 +160,9 @@ const TargetScreen = ({navigation}) => {
                     </View>
                     <View style={styles.targetItemAmountContainer}>
                       <Text style={styles.targetItemTarget}>{formatCurrency(item.targetAmount)}</Text>
-                      <Text style={styles.targetItemDate}>Tanggal: {item.date}</Text>
+                      <Text style={styles.targetItemDate}>
+                        {item.targetDate ? `Target: ${new Date(item.targetDate).toLocaleDateString('id-ID')}` : ''}
+                      </Text>
                     </View>
                   </View>
 
