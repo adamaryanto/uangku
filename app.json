@@ -4,11 +4,11 @@
     "slug": "Uangku",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/uangkuPutih.png",
+    "icon": "src/assets/Logo.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/uangkuPutih.png",
+      "image": "src/assets/uangkuPutih.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -17,13 +17,20 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/uangkuBiru.png",
+        "foregroundImage": "src/assets/Logo.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.TechByte.Uangku"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
-    }
+      "favicon": "src/assets/uangkuBiruIcon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "7a386e22-376f-4969-9af4-8ab9e9e5a85b"
+      }
+    },
+    "owner": "rchao"
   }
 }
