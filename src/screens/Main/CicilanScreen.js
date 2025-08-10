@@ -13,13 +13,6 @@ import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTransactions } from '../../contexts/TransactionsContext';
 import { useNavigation } from '@react-navigation/native';
-// Data target
-const targets = [
-  { id: '1', name: 'Iphone 12 pro max', targetAmount: 14000000, savedAmount: 6000000, date: '01-01-2025' },
-  { id: '2', name: 'Macbook Pro M3', targetAmount: 30000000, savedAmount: 6000000, date: '01-06-2025' },
-  { id: '3', name: 'Macbook Pro M3', targetAmount: 30000000, savedAmount: 6000000, date: '01-06-2025' },
-  { id: '4', name: 'Macbook Pro M3', targetAmount: 30000000, savedAmount: 6000000, date: '01-06-2025' },
-];
 
 // Format angka jadi Rupiah
 const formatCurrency = (number) => {
@@ -31,70 +24,93 @@ const formatCurrency = (number) => {
 };
 
 // Komponen progress bar
-const ProgressBar = ({ progress }) => (
-  <View style={styles.progressBarBackground}>
-    <View style={[styles.progressBarFill, { width: `${progress}%` }]} />
-  </View>
-);
+const ProgressBar = ({ progress }) => {
+  const isComplete = progress >= 100;
+  return (
+    <View style={styles.progressBarBackground}>
+      <View 
+        style={[
+          styles.progressBarFill, 
+          { 
+            width: `${progress}%`,
+            backgroundColor: isComplete ? '#00C7AF' : '#FEB01A'
+          }
+        ]} 
+      />
+    </View>
+  );
+};
 
 const CicilanScreen = ({ navigation }) => {
   const [showAll, setShowAll] = useState(false);
   const [isMenuVisible, setIsMenuVisible] = useState(false);
-
-  // Get cicilan data from context
   const { getCicilanTransactions } = useTransactions();
-  const cicilan = getCicilanTransactions();
-
-  const cicilanToShow = showAll ? cicilan : cicilan.slice(0, 2);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
   
-  // Calculate total active cicilan
-  const totalCicilanAktif = cicilan
-    .filter(item => (item.paidAmount || 0) < (item.totalCicilan || 0))
-    .reduce((sum, item) => sum + ((item.totalCicilan || 0) - (item.paidAmount || 0)), 0);
+  // Get cicilan transactions and ensure it's always an array
+  const cicilanTransactions = getCicilanTransactions() || [];
+  
+  const filteredCicilan = cicilanTransactions.filter(cicil => 
+    cicil && cicil.name && cicil.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // Sort by due date (nearest first)
+  const sortedCicilan = [...filteredCicilan].sort((a, b) => {
+    // Handle cases where dueDate might be undefined
+    const getDateValue = (item) => {
+      if (!item.dueDate) return new Date(0); // Default to epoch if no date
+      try {
+        // Handle both DD-MM-YYYY and YYYY-MM-DD formats
+        const parts = item.dueDate.split(/[-/]/);
+        if (parts.length === 3) {
+          // If format is DD-MM-YYYY
+          if (parts[0].length === 2) {
+            return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+          }
+          // If format is YYYY-MM-DD
+          return new Date(item.dueDate);
+        }
+        return new Date(0);
+      } catch (e) {
+        console.error('Error parsing date:', item.dueDate, e);
+        return new Date(0);
+      }
+    };
+    
+    const dateA = getDateValue(a);
+    const dateB = getDateValue(b);
+    
+    return dateA - dateB;
+  });
+
+  const cicilanToShow = showAll ? sortedCicilan : sortedCicilan.slice(0, 3);
+  
+  // Calculate totals with null checks
+  const totalCicilan = sortedCicilan.reduce((sum, item) => 
+    sum + (parseFloat(item?.totalCicilan) || 0), 0);
+    
+  const totalPaid = sortedCicilan.reduce((sum, item) => 
+    sum + (parseFloat(item?.paidAmount) || 0), 0);
+    
+  const totalRemaining = Math.max(0, totalCicilan - totalPaid);
+  
+  // Calculate total active cicilan with null checks
+  const totalCicilanAktif = sortedCicilan
+    .filter(item => item && (item.paidAmount || 0) < (item.totalCicilan || 0))
+    .reduce((sum, item) => sum + ((item?.totalCicilan || 0) - (item?.paidAmount || 0)), 0);
+
+  // Count completed and pending cicilan
+  const completedCicilan = sortedCicilan.filter(item => 
+    (item.paidAmount || 0) >= (item.totalCicilan || 0)
+  ).length;
+  const pendingCicilan = sortedCicilan.length - completedCicilan;
 
   const handleNavigate = (screenName) => {
     setIsMenuVisible(false);
     navigation.navigate(screenName);
   };
 
-  const renderCicilanItem = ({ item }) => {
-    const total = parseFloat(item.totalCicilan || 0);
-    const paid = parseFloat(item.paidAmount || 0);
-    const progress = total > 0 ? (paid / total) * 100 : 0;
-    const isPaidOff = paid >= total;
-
-    return (
-      <TouchableOpacity 
-      style={styles.targetItemRow}
-      onPress={() => {
-        console.log('Item clicked', item); // Add this line
-        navigation.navigate('CicilanDetail', { cicilan: item });
-      }}
-    >
-      <View style={styles.targetItemHeader}>
-        <View style={styles.targetIconContainer}>
-          <MaterialCommunityIcons name="credit-card-multiple-outline" size={24} color="#005AE0" />
-        </View>
-        <View style={styles.targetItemDetails} >
-          <Text style={styles.targetItemName}>{item.name || 'Tanpa Nama'}</Text>
-          <Text style={styles.targetItemSaved}>{formatCurrency(paid)}</Text>
-        </View>
-        <View style={styles.targetItemAmountContainer}>
-          <Text style={styles.targetItemDate}>Jatuh Tempo: {item.dueDate}</Text>
-          <Text style={styles.targetItemTarget}>{formatCurrency(total)}</Text>
-          <Text style={[styles.targetItemDate, { color: isPaidOff ? '#27AE60' : '#E74C3C' }]}>
-            {isPaidOff ? 'Lunas' : 'Belum Lunas'}
-          </Text>
-        </View>
-      </View>
-      <View style={styles.progressContainer}>
-        <Text style={styles.progressText}>{Math.min(100, Math.floor(progress))}%</Text>
-        <ProgressBar progress={progress} />
-        <Text style={styles.progressText}>100%</Text>
-      </View>
-    </TouchableOpacity>
-    );
-  };
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
@@ -119,21 +135,21 @@ const CicilanScreen = ({ navigation }) => {
             <TouchableOpacity style={[styles.filterButton, { backgroundColor: '#FEB01A' }]}>
               <Text style={styles.filterButtonText}>
                 Cicilan{'\n'}
-                <Text style={styles.filterButtonCount}>3</Text>
+                <Text style={styles.filterButtonCount}>{sortedCicilan.length}</Text>
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={[styles.filterButton, { backgroundColor: '#FF4560' }]}>
               <Text style={styles.filterButtonText}>
                 Belum Lunas{'\n'}
-                <Text style={styles.filterButtonCount}>3</Text>
+                <Text style={styles.filterButtonCount}>{pendingCicilan}</Text>
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={[styles.filterButton, { backgroundColor: '#00C7AF' }]}>
               <Text style={styles.filterButtonText}>
                 Lunas{'\n'}
-                <Text style={styles.filterButtonCount}>3</Text>
+                <Text style={styles.filterButtonCount}>{completedCicilan}</Text>
               </Text>
             </TouchableOpacity>
           </View>
@@ -149,23 +165,24 @@ const CicilanScreen = ({ navigation }) => {
             <View style={styles.summaryCard}>
               <Text style={styles.summaryLabel}>Cicilan terpenuhi :</Text>
               <Text style={[styles.summaryAmount, { color: '#FEB01A' }]}>
-                +Rp. 26.000.000,00
+                +{formatCurrency(totalPaid)}
               </Text>
             </View>
             <View style={styles.summaryCard}>
               <Text style={styles.summaryLabel}>Sisa dana Cicilan :</Text>
               <Text style={[styles.summaryAmount, { color: '#E63950' }]}>
-                -Rp. 14.000.000,00
+                -{formatCurrency(totalRemaining)}
               </Text>
             </View>
           </View>
 
-          {/* List Target */}
+          {/* List Cicilan */}
           <View style={styles.allTargetsCard}>
             <Text style={styles.targetListTitle}>Cicilan anda :</Text>
             {cicilanToShow.map((item) => {
               const total = parseFloat(item.totalCicilan || 0);
               const paid = parseFloat(item.paidAmount || 0);
+              const remaining = Math.max(0, total - paid);
               const progress = total > 0 ? (paid / total) * 100 : 0;
               const isPaidOff = paid >= total;
               
@@ -177,14 +194,26 @@ const CicilanScreen = ({ navigation }) => {
                     </View>
                     <View style={styles.targetItemDetails}>
                       <Text style={styles.targetItemName}>{item.name || 'Tanpa Nama'}</Text>
-                      <Text style={styles.targetItemSaved}>{formatCurrency(paid)}</Text>
+                      <Text style={styles.targetItemSaved}>Dibayar: {formatCurrency(paid)}</Text>
+                      <Text style={styles.targetItemRemaining}>Sisa: {formatCurrency(remaining)}</Text>
                     </View>
                     <View style={styles.targetItemAmountContainer}>
+                      <Text style={styles.targetItemTarget}>Total: {formatCurrency(total)}</Text>
                       <Text style={styles.targetItemDate}>Jatuh Tempo: {item.dueDate}</Text>
-                      <Text style={styles.targetItemTarget}>{formatCurrency(total)}</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.targetItemAmountContainer}>
+                    <View style={styles.rightAlignedRow}>
                       <Text style={[styles.targetItemDate, { color: isPaidOff ? '#27AE60' : '#E74C3C' }]}>
                         {isPaidOff ? 'Lunas' : 'Belum Lunas'}
                       </Text>
+                      <TouchableOpacity 
+                        onPress={() => navigation.navigate('UpdateCicilanProgress', { cicilan: item })}
+                        style={styles.chevronButton}
+                      >
+                        <MaterialCommunityIcons name="chevron-right" size={24} color="#666" />
+                      </TouchableOpacity>
                     </View>
                   </View>
 
@@ -198,7 +227,7 @@ const CicilanScreen = ({ navigation }) => {
             })}
 
             {/* Tombol Lihat Lainnya */}
-            {targets.length > 3 && !showAll && (
+            {sortedCicilan.length > 3 && !showAll && (
               <TouchableOpacity
                 style={styles.seeMoreButton}
                 onPress={() => setShowAll(true)}
@@ -207,7 +236,7 @@ const CicilanScreen = ({ navigation }) => {
               </TouchableOpacity>
             )}
 
-            {showAll && (
+            {showAll && sortedCicilan.length > 3 && (
               <TouchableOpacity
                 style={styles.seeMoreButton}
                 onPress={() => setShowAll(false)}
@@ -398,21 +427,35 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   targetItemSaved: {
-    fontSize: 14,
-    color: '#F39C12',
-    fontWeight: 'bold',
+    fontSize: 13,
+    color: '#005AE0',
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  targetItemRemaining: {
+    fontSize: 13,
+    color: '#E63950',
+    fontWeight: '500',
+    marginTop: 2,
   },
   targetItemAmountContainer: {
     alignItems: 'flex-end',
   },
   targetItemTarget: {
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: 'bold',
-    color: '#E74C3C',
+    color: '#E63950',
   },
   targetItemDate: {
-    fontSize: 12,
-    color: '#999',
+    fontSize: 11,
+    color: '#888',
+  },
+  rightAlignedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  chevronButton: {
+    marginLeft: 8,
   },
   progressContainer: {
     flexDirection: 'row',
@@ -516,6 +559,9 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
   
+  chevronButton: {
+    padding: 8,
+  },
   progressBarBackground: {
     flex: 1,
     height: 8,

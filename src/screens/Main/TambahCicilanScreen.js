@@ -1,79 +1,85 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, TextInput, Alert, ImageBackground, Platform } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { useTransactions } from '../../contexts/TransactionsContext';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 // Komponen Input Kustom
-const LabeledInput = ({ label, placeholder, value, onChangeText, keyboardType = 'default', onPress }) => (
+const LabeledInput = ({ label, placeholder, value, onChangeText, keyboardType = 'default' }) => (
   <View style={styles.inputRow}>
     <Text style={styles.inputLabel}>{label}</Text>
     <TextInput
-      style={[styles.input, onPress && styles.inputWithIcon]}
+      style={styles.input}
       placeholder={placeholder}
       placeholderTextColor="#A9A9A9"
       value={value}
       onChangeText={onChangeText}
       keyboardType={keyboardType}
-      onFocus={onPress} // Open date picker when input is focused
-      editable={!onPress} // Make date input read-only
     />
-    {onPress && (
-      <TouchableOpacity style={styles.dateIcon} onPress={onPress}>
-        <MaterialCommunityIcons name="calendar-month" size={24} color="#005AE0" />
-      </TouchableOpacity>
-    )}
   </View>
 );
-
+ 
 const TambahCicilanScreen = ({ navigation }) => {
-  const [namaCicilan, setNamaCicilan] = useState('');
-  const [totalCicilan, setTotalCicilan] = useState('');
-  const [jatuhTempo, setJatuhTempo] = useState('');
-  const [catatan, setCatatan] = useState('');
-  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [name, setName] = useState('');
+  const [targetAmount, setTargetAmount] = useState('');
+  const [notes, setNotes] = useState('');
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   
   const { addCicilan } = useTransactions();
 
-  const handleDateChange = (event, selectedDate) => {
-    setShowDatePicker(Platform.OS === 'ios');
-    if (selectedDate) {
-      // Format date to DD-MM-YYYY
-      const day = String(selectedDate.getDate()).padStart(2, '0');
-      const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
-      const year = selectedDate.getFullYear();
-      setJatuhTempo(`${day}-${month}-${year}`);
+  const formatDate = (date) => {
+    return date.toLocaleDateString('id-ID', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    }).replace(/\//g, '-');
+  };
+
+  const handleStartDateChange = (event, date) => {
+    setShowStartDatePicker(Platform.OS === 'ios');
+    if (date) {
+      setStartDate(formatDate(date));
     }
   };
 
-  const showDatepicker = () => {
-    setShowDatePicker(true);
+  const handleEndDateChange = (event, date) => {
+    setShowEndDatePicker(Platform.OS === 'ios');
+    if (date) {
+      setEndDate(formatDate(date));
+    }
   };
 
   const handleSave = () => {
-    if (!namaCicilan || !totalCicilan || !jatuhTempo) {
-      Alert.alert('Error', 'Nama cicilan, total cicilan, dan jatuh tempo wajib diisi.');
+    if (!name || !targetAmount) {
+      Alert.alert('Error', 'Nama cicilan dan jumlah cicilan wajib diisi.');
       return;
     }
 
-    const totalAmount = parseFloat(totalCicilan.replace(/\./g, ''));
+    // Hapus semua karakter non-digit dan konversi ke number
+    const amount = parseInt(targetAmount.replace(/\D/g, ''), 10);
     
-    if (isNaN(totalAmount) || totalAmount <= 0) {
-      Alert.alert('Error', 'Jumlah harus berupa angka yang valid dan lebih dari 0');
+    if (isNaN(amount) || amount <= 0) {
+      Alert.alert('Error', 'Jumlah cicilan harus berupa angka yang valid dan lebih dari 0');
       return;
     }
 
     const newCicilan = {
-      name: namaCicilan,
-      totalCicilan: totalCicilan,
+      id: Date.now().toString(),
+      name: name.trim(),
+      totalCicilan: amount,
       paidAmount: 0,
-      dueDate: jatuhTempo,
-      description: catatan,
+      date: new Date().toLocaleDateString('id-ID').replace(/\//g, '-'),
+      startDate: startDate,
+      dueDate: endDate,
+      notes: notes.trim(),
+      paymentHistory: []
     };
 
-    console.log('Menyimpan cicilan baru:', newCicilan);
-    
     addCicilan(newCicilan);
     
     Alert.alert('Sukses', 'Cicilan berhasil ditambahkan.', [
@@ -84,12 +90,19 @@ const TambahCicilanScreen = ({ navigation }) => {
   // Format input jumlah dengan titik sebagai pemisah ribuan
   const formatCurrencyInput = (text) => {
     // Hapus semua karakter selain angka
-    const numericValue = text.replace(/[^0-9]/g, '');
+    const numericValue = text.replace(/\D/g, '');
     
     // Format dengan titik sebagai pemisah ribuan
     const formattedValue = numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
     
     return formattedValue;
+  };
+
+  // Handle perubahan input jumlah
+  const handleAmountChange = (text) => {
+    // Simpan nilai tanpa format untuk perhitungan
+    const rawValue = text.replace(/\./g, '');
+    setTargetAmount(rawValue);
   };
 
   return (
@@ -106,64 +119,74 @@ const TambahCicilanScreen = ({ navigation }) => {
               <Text style={styles.backButtonText}>Kembali</Text>
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Cicilan</Text>
-            <Text style={styles.headerSubtitle}>Catat Semua Cicilan Yang Kamu Punya Seperti Cicilan Rumah,crypto,atau lainya</Text>
+            <Text style={styles.headerSubtitle}>Catat Semua cicilan yang kamu punya, seperti cicilan rumah, motor, atau lainnya</Text>
           </View>
 
           <View style={styles.contentContainer}>
             <View style={styles.formCard}>
-                 <View style={styles.card}>
-                           {/* --- DIUBAH --- Judul dan tombol sekarang dibungkus dalam satu View --- */}
-                           <View style={styles.cardHeader}>
-                               <Text style={styles.cardTitle}>Periode Transaksi :</Text>
-
-                           </View>
-                           <View style={styles.dateContainer}>
-                               <TouchableOpacity style={styles.datePicker}>
-                                   <Text style={styles.dateLabel}>Dari tanggal :</Text>
-                                   <Text style={styles.dateValue}>31-07-2025</Text>
-                               </TouchableOpacity>
-                               <TouchableOpacity style={styles.datePicker}>
-                                   <Text style={styles.dateLabel}>Sampai tanggal :</Text>
-                                   <Text style={styles.dateValue}>31-07-2025</Text>
-                               </TouchableOpacity>
-                           </View>
-                         </View>
-                    
+              <View style={styles.card}>
+                <View style={styles.cardHeader}>
+                  <Text style={styles.cardTitle}>Periode Cicilan :</Text>
+                </View>
+                <View style={styles.dateContainer}>
+                  <TouchableOpacity
+                    style={styles.datePicker}
+                    onPress={() => setShowStartDatePicker(true)}
+                  >
+                    <Text style={styles.dateLabel}>Dari tanggal :</Text>
+                    <Text style={styles.dateValue}>{startDate || 'DD-MM-YYYY'}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.datePickerEnd}
+                    onPress={() => setShowEndDatePicker(true)}
+                  >
+                    <Text style={[styles.dateLabel, { textAlign: 'right' }]}>Sampai tanggal :</Text>
+                    <Text style={[styles.dateValue, { textAlign: 'right' }]}>{endDate || 'DD-MM-YYYY'}</Text>
+                  </TouchableOpacity>
+                </View>
+                {showStartDatePicker && (
+                  <DateTimePicker
+                    value={new Date()}
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={handleStartDateChange}
+                  />
+                )}
+                {showEndDatePicker && (
+                  <DateTimePicker
+                    value={new Date()}
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={handleEndDateChange}
+                  />
+                )}
+              </View>
 
               <LabeledInput 
-                label="Nama Cicilan: "
-                placeholder="Iphone 12"
-                value={namaCicilan}
-                onChangeText={setNamaCicilan}
+                label="Nama Cicilan"
+                placeholder="Contoh: Cicilan Motor"
+                value={name}
+                onChangeText={setName}
               />
               <LabeledInput 
-                label="Total Cicilan"
-                placeholder="Rp"
-                value={formatCurrencyInput(totalCicilan)}
-                onChangeText={(text) => setTotalCicilan(text.replace(/\./g, ''))}
+                label="Jumlah Cicilan"
+                placeholder="Contoh: 2.000.000"
+                value={formatCurrencyInput(targetAmount)}
+                onChangeText={handleAmountChange}
                 keyboardType="numeric"
               />
-              <LabeledInput 
-                label="Jatuh Tempo"
-                placeholder="Pilih tanggal"
-                value={jatuhTempo}
-                onPress={showDatepicker}
-              />
-              {showDatePicker && (
-                <DateTimePicker
-                  value={new Date()}
-                  mode="date"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  onChange={handleDateChange}
-                  minimumDate={new Date()}
+              <View style={[styles.inputRow, { alignItems: 'flex-start' }]}>
+                <Text style={[styles.inputLabel, { marginTop: 12 }]}>Catatan</Text>
+                <TextInput
+                  style={[styles.input, { textAlignVertical: 'top', paddingTop: 12 }]}
+                  placeholder="Tambah catatan (opsional)"
+                  placeholderTextColor="#A9A9A9"
+                  value={notes}
+                  onChangeText={setNotes}
+                  multiline
+                  numberOfLines={4}
                 />
-              )}
-              <LabeledInput 
-                label="Catatan"
-                placeholder="Tambah catatan (opsional)"
-                value={catatan}
-                onChangeText={setCatatan}
-              />
+              </View>
 
               <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
                 <MaterialCommunityIcons name="content-save-outline" size={22} color="white" style={{marginRight: 10}} />
@@ -215,7 +238,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 6,
     padding: 15,
-    marginTop:-40,
+    marginTop: -40,
     marginBottom: 11,
     elevation: 2,
     shadowColor: '#000',
@@ -233,14 +256,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom:10,
+    marginBottom: 10,
   },
   dateContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 15,
   },
   datePicker: {
     width: '48%',
+    alignItems: 'flex-start',
+  },
+  datePickerEnd: {
+    width: '48%',
+    alignItems: 'flex-end',
   },
   dateLabel: {
     fontSize: 14,
@@ -256,15 +286,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F5F5',
     borderRadius: 15,
     padding: 20,
-    width:'100%',
-    height:'120%',
+    width: '100%',
+    height: '120%',
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
   },
-  
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -283,16 +312,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingVertical: 12,
     fontSize: 16,
-    color:'#D0D0D0',
-    backgroundColor:'#FFFFFF'
-  },
-  inputWithIcon: {
-    paddingRight: 40, // Make room for the calendar icon
-  },
-  dateIcon: {
-    position: 'absolute',
-    right: 10,
-    top: 40,
+    color: '#333',
+    backgroundColor: '#FFFFFF'
   },
   saveButton: {
     flexDirection: 'row',
