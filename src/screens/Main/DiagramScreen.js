@@ -1,133 +1,270 @@
-import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Alert,ImageBackground } from 'react-native';
+import React, { useState, useEffect, useContext } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Alert, ImageBackground, Dimensions, FlatList } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-// --- DIHAPUS --- MaterialCommunityIcons tidak digunakan di layar ini
-import { PieChart } from 'react-native-svg-charts';
-import { Dimensions } from 'react-native';
+import { PieChart } from 'react-native-chart-kit';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-const screenWidth = Dimensions.get('window').width;
-// --- DATA STATIS (Nantinya akan dari API) ---
-const chartData = [
-    {
-        key: 1,
-        amount: 50,
-        svg: { fill: '#3498DB' }, // Biru
-        label: 'Makan & Minum'
-    },
-    {
-        key: 2,
-        amount: 50,
-        svg: { fill: '#27AE60' }, // Hijau
-        label: 'Transportasi'
-    },
-    {
-        key: 3,
-        amount: 40,
-        svg: { fill: '#F39C12' }, // Oranye
-        label: 'Belanja'
-    },
-    {
-        key: 4,
-        amount: 95,
-        svg: { fill: '#E74C3C' }, // Merah
-        label: 'Tagihan'
-    }
-]
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { useTransactions } from '../../contexts/TransactionsContext';
 
-// Helper untuk format mata uang
+const screenWidth = Dimensions.get('window').width;
+
+// Warna untuk setiap tipe transaksi
+const typeColors = {
+  'Pemasukan': '#27AE60',    // Hijau
+  'Pengeluaran': '#E74C3C',  // Merah
+  'Target': '#3498DB',       // Biru
+  'Cicilan': '#9B59B6'      // Ungu
+};
+
+// Warna untuk setiap kategori (jika diperlukan)
+const categoryColors = {
+  'Makan & Minum': '#3498DB',
+  'Transportasi': '#27AE60',
+  'Belanja': '#F39C12',
+  'Tagihan': '#E74C3C',
+  'Pendapatan': '#9B59B6',
+  'Lainnya': '#7F8C8D',
+  'Transfer Keluar': '#E74C3C',
+  'Transfer Masuk': '#2ECC71'
+};
+
+const chartStyles = StyleSheet.create({
+  chartContainer: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 0,
+  },
+});
+
+// Format mata uang
 const formatCurrency = (number) => {
-  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    minimumFractionDigits: 0
+  }).format(number);
+};
+
+// Format tanggal untuk perbandingan
+const formatDate = (date) => {
+  return date.toISOString().split('T')[0];
+};
+
+// Format tanggal untuk display
+const formatDisplayDate = (date) => {
+  return date.toLocaleDateString('id-ID', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  });
 };
 
 const DiagramScreen = ({ navigation }) => {
+  const { transactions, getTotalBalance, getTotalIncome, getTotalExpense } = useTransactions();
+  const [startDate, setStartDate] = useState(new Date());
+  const [endDate, setEndDate] = useState(new Date());
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
+  const [chartData, setChartData] = useState([]);
 
-  const handleDownloadPdf = () => {
-        // Logika sementara
-        Alert.alert('Download PDF', 'Fitur untuk mengunduh laporan PDF akan segera hadir!');
+  // Filter transactions by date range
+  useEffect(() => {
+    const startDateStr = formatDate(startDate);
+    const endDateStr = formatDate(endDate);
+
+    const filteredTransactions = transactions.filter(transaction => {
+      const transactionDate = transaction.date;
+      return transactionDate >= startDateStr && transactionDate <= endDateStr;
+    });
+
+    // Calculate totals by transaction type
+    const typeTotals = {
+      'Pemasukan': 0,
+      'Pengeluaran': 0,
+      'Target': 0,
+      'Cicilan': 0
     };
 
-    const Legend = () => (
-        <View style={styles.legendContainer}>
-            {chartData.map(item => (
-                <View key={item.key} style={styles.legendItem}>
-                    <View style={[styles.legendColor, { backgroundColor: item.svg.fill }]} />
-                    <Text style={styles.legendText}>{item.label}</Text>
-                </View>
-            ))}
+    filteredTransactions.forEach(transaction => {
+      if (typeTotals.hasOwnProperty(transaction.type)) {
+        typeTotals[transaction.type] += Math.abs(transaction.amount);
+      }
+    });
+
+    // Calculate total for percentage
+    const total = Object.values(typeTotals).reduce((sum, amount) => sum + amount, 0);
+
+    // Convert to array format for PieChart and add percentage
+    const pieData = Object.entries(typeTotals)
+      .filter(([_, amount]) => amount > 0) // Only include types with amount > 0
+      .map(([type, amount]) => {
+        const percentage = total > 0 ? Math.round((amount / total) * 100) : 0;
+        return {
+          name: `${type} (${percentage}%)`,
+          population: amount,
+          color: typeColors[type] || '#7F8C8D',
+          legendFontColor: '#7F7F7F',
+          legendFontSize: 12
+        };
+      });
+
+    setChartData(pieData);
+  }, [transactions, startDate, endDate]);
+
+  const chartConfig = {
+    color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+    labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+    style: {
+      borderRadius: 16
+    }
+  };
+
+  const handleStartDateChange = (event, date) => {
+    setShowStartDatePicker(false);
+    if (date) {
+      setStartDate(date);
+    }
+  };
+
+  const handleEndDateChange = (event, date) => {
+    setShowEndDatePicker(false);
+    if (date) {
+      setEndDate(date);
+    }
+  };
+
+  const handleDownloadPdf = () => {
+    Alert.alert('Download PDF', 'Fitur untuk mengunduh laporan PDF akan segera hadir!');
+  };
+
+  const Legend = () => (
+    <View style={styles.legendContainer}>
+      {chartData.map((item, index) => (
+        <View key={index} style={styles.legendItem}>
+          <View style={[styles.legendColor, { backgroundColor: item.color }]} />
+          <Text style={styles.legendText}>
+            {item.name}: {formatCurrency(item.population)}
+          </Text>
         </View>
-    )
+      ))}
+    </View>
+  );
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
-     <ScrollView>
-        
-      <ImageBackground
-                source={require('../../assets/image.png')}
-                style={styles.headerContainer}
-                imageStyle={{ borderBottomLeftRadius: 25, borderBottomRightRadius: 25 }}
-              >
-                <Text style={styles.headerTitle}>Tujuan Keuangan Anda</Text>
-                <Text style={styles.headerSubtitle}>
-                  Tinjau Pola Pengeluaran dan Pemasukan secara grafis
-                </Text>
-              </ImageBackground>
+      <ScrollView>
+        <ImageBackground
+          source={require('../../assets/image.png')}
+          style={styles.headerContainer}
+          imageStyle={{ borderBottomLeftRadius: 25, borderBottomRightRadius: 25 }}
+        >
+          <Text style={styles.headerTitle}>Analisis Keuangan</Text>
+          <Text style={styles.headerSubtitle}>
+            Tinjau Pola Pengeluaran dan Pemasukan secara grafis
+          </Text>
+        </ImageBackground>
 
-      <View style={styles.contentContainer} showsVerticalScrollIndicator={false}>
-           <View style={styles.card}>
-            {/* --- DIUBAH --- Judul dan tombol sekarang dibungkus dalam satu View --- */}
+        <View style={styles.contentContainer}>
+          {/* Card untuk Periode Transaksi */}
+          <View style={styles.card}>
             <View style={styles.cardHeader}>
-                <Text style={styles.cardTitle}>Periode Transaksi :</Text>
-                <TouchableOpacity style={styles.downloadButton} onPress={handleDownloadPdf}>
-                    <Text style={styles.downloadButtonText}>Export Pdf</Text>
-                </TouchableOpacity>
+              <Text style={styles.cardTitle}>Periode Transaksi :</Text>
+              <TouchableOpacity style={styles.downloadButton} onPress={handleDownloadPdf}>
+                <Text style={styles.downloadButtonText}>Export Pdf</Text>
+              </TouchableOpacity>
             </View>
             <View style={styles.dateContainer}>
-                <TouchableOpacity style={styles.datePicker}>
-                    <Text style={styles.dateLabel}>Dari tanggal :</Text>
-                    <Text style={styles.dateValue}>31-07-2025</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.datePicker}>
-                    <Text style={styles.dateLabel}>Sampai tanggal :</Text>
-                    <Text style={styles.dateValue}>31-07-2025</Text>
-                </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.datePicker}
+                onPress={() => setShowStartDatePicker(true)}
+              >
+                <Text style={styles.dateLabel}>Dari tanggal :</Text>
+                <Text style={styles.dateValue}>{formatDisplayDate(startDate)}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.datePickerEnd}
+                onPress={() => setShowEndDatePicker(true)}
+              >
+                <Text style={[styles.dateLabel, { textAlign: 'right' }]}>Sampai tanggal :</Text>
+                <Text style={[styles.dateValue, { textAlign: 'right' }]}>{formatDisplayDate(endDate)}</Text>
+              </TouchableOpacity>
             </View>
+
+            {showStartDatePicker && (
+              <DateTimePicker
+                value={startDate}
+                mode="date"
+                display="default"
+                onChange={handleStartDateChange}
+                maximumDate={new Date()}
+              />
+            )}
+
+            {showEndDatePicker && (
+              <DateTimePicker
+                value={endDate}
+                mode="date"
+                display="default"
+                onChange={handleEndDateChange}
+                maximumDate={new Date()}
+                minimumDate={startDate}
+              />
+            )}
           </View>
 
+          {/* Card untuk Chart */}
           <View style={[styles.card, styles.chartCard]}>
-          <PieChart
-            style={{ height: 200, width: 150 }}
-            data={chartData.map((item, index) => ({
-                key: item.key || `pie-${index}`, // key unik
-                value: item.amount,
-                svg: item.svg,
-                arc: { outerRadius: '95%', innerRadius: '60%' }
-            }))}
-            />
-            <Legend />
-          </View>
+  <Text style={styles.sectionTitle}>Ringkasan Pengeluaran</Text>
+  {chartData.length > 0 ? (
+    <View style={chartStyles.chartContainer}>
+      <PieChart
+        data={chartData}
+        width={200} // ukuran lingkaran
+        height={200}
+        chartConfig={chartConfig}
+        accessor="population"
+        backgroundColor="transparent"
+        absolute
+        hasLegend={false}
+      />
+      <Legend />
+    </View>
+  ) : (
+    <View style={styles.emptyState}>
+      <MaterialCommunityIcons name="chart-pie" size={50} color="#DDD" />
+      <Text style={styles.emptyStateText}>
+        Tidak ada data pengeluaran untuk periode ini
+      </Text>
+    </View>
+  )}
+</View>
 
+          {/* Card untuk Total Dana Keseluruhan */}
           <View style={styles.card}>
             <Text style={styles.totalLabel}>Total dana keseluruhan :</Text>
-            <Text style={styles.totalAmount}>{formatCurrency(116000000)}</Text>
+            <Text style={styles.totalAmount}>{formatCurrency(getTotalBalance())}</Text>
           </View>
-          
+
+          {/* Card untuk Detail */}
           <View style={styles.card}>
             <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Total dana transaksi :</Text>
-                <Text style={styles.detailAmount}>{formatCurrency(50000000)}</Text>
+              <Text style={styles.detailLabel}>Total Pemasukan :</Text>
+              <Text style={[styles.detailAmount, { color: '#27AE60' }]}>{formatCurrency(getTotalIncome())}</Text>
             </View>
             <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Total dana transaksi :</Text>
-                <Text style={styles.detailAmount}>{formatCurrency(50000000)}</Text>
+              <Text style={styles.detailLabel}>Total Pengeluaran :</Text>
+              <Text style={[styles.detailAmount, { color: '#E74C3C' }]}>{formatCurrency(getTotalExpense())}</Text>
             </View>
-            <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Total dana transaksi :</Text>
-                <Text style={styles.detailAmount}>{formatCurrency(50000000)}</Text>
+            <View style={[styles.detailRow, { borderBottomWidth: 0 }]}>
+              <Text style={styles.detailLabel}>Saldo :</Text>
+              <Text style={styles.detailAmount}>{formatCurrency(getTotalBalance())}</Text>
             </View>
           </View>
-      </View>
-      </ScrollView> 
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -168,7 +305,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
-  },cardHeader: {
+  },
+  cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -178,14 +316,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
-    // marginBottom dihapus dari sini
   },
   dateContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    width: '100%',
   },
   datePicker: {
     width: '48%',
+    alignItems: 'flex-start',
+  },
+  datePickerEnd: {
+    width: '48%',
+    alignItems: 'flex-end',
   },
   dateLabel: {
     fontSize: 14,
@@ -194,13 +337,41 @@ const styles = StyleSheet.create({
   },
   dateValue: {
     fontSize: 16,
-    
     color: '#333',
     marginTop: 5,
   },
   chartCard: {
-    flexDirection: 'row',
     alignItems: 'center',
+    padding: 15,
+    paddingBottom: 25,
+  },
+  chartContainer: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+  },
+  chartWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 15,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 30,
+  },
+  emptyStateText: {
+    color: '#999',
+    marginTop: 10,
+    textAlign: 'center',
+    paddingHorizontal: 20,
   },
   legendContainer: {
     marginLeft: 20,
@@ -249,24 +420,18 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#005AE0',
   },
-   downloadButtonText: {
-  backgroundColor: 'red',
-  paddingVertical: 7,
-  paddingHorizontal: 10,
-  borderRadius: 5,
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'center',
-  elevation: 3,
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.1,
-  shadowRadius: 4,
-  color:'white',
-}
-
-
-
+  downloadButton: {
+    backgroundColor: '#DC3545',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 5,
+    elevation: 2,
+  },
+  downloadButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 14,
+  }
 });
 
 export default DiagramScreen;
