@@ -3,27 +3,24 @@ import React, { createContext, useState, useContext } from 'react';
 const TransactionsContext = createContext();
 
 export const TransactionsProvider = ({ children }) => {
-  const [transactions, setTransactions] = useState([
-    { id: '1', type: 'Pemasukan', category: 'Gaji', amount: 4000000, date: '01-01-2025', icon: 'briefcase-outline' },
-    { id: '2', type: 'Pengeluaran', category: 'Makan', amount: 600000, date: '01-01-2025', icon: 'arrow-down-circle-outline' },
-  ]);
+  const [transactions, setTransactions] = useState([]);
 
-  const [targets, setTargets] = useState([
-    { id: '1', name: 'Iphone 12 pro max', targetAmount: 14000000, savedAmount: 6000000, date: '01-01-2025' },
-    { id: '2', name: 'Macbook Pro M3', targetAmount: 30000000, savedAmount: 6000000, date: '01-06-2025' },
-  ]);
-
-  const [cicilan, setCicilan] = useState([
-    { id: '1', name: 'Cicilan Motor Vario', totalAmount: 12000000, paidAmount: 6000000, dueDate: '25-08-2025' },
-  ]);
+  const formatTransactionDate = (date) => {
+    const d = new Date(date);
+    return d.toISOString().split('T')[0]; // Returns YYYY-MM-DD format for consistent comparison
+  };
 
   const addTransaction = (newTransaction) => {
+    const now = new Date();
+    const formattedDate = formatTransactionDate(now);
+    
     setTransactions(prevTransactions => [
       ...prevTransactions,
       {
         ...newTransaction,
         id: Date.now().toString(),
-        date: new Date().toLocaleDateString('id-ID', {
+        date: formattedDate,
+        displayDate: now.toLocaleDateString('id-ID', {
           day: '2-digit',
           month: 'long',
           year: 'numeric'
@@ -33,31 +30,57 @@ export const TransactionsProvider = ({ children }) => {
   };
 
   const addTarget = (newTarget) => {
-  setTargets(prevTargets => {
-    const updatedTargets = [
-      ...prevTargets,
-      {
-        ...newTarget,
-        id: Date.now().toString(),
-        savedAmount: newTarget.savedAmount || 0,
-        date: newTarget.date || new Date().toLocaleDateString('id-ID')
-      }
-    ];
-    console.log("Updated Targets:", updatedTargets);
-    return updatedTargets;
-  });
-};
+    const now = new Date();
+    const formattedDate = formatTransactionDate(now);
+    
+    const targetTransaction = {
+      ...newTarget,
+      id: Date.now().toString(),
+      type: 'Target',
+      date: formattedDate,
+      savedAmount: newTarget.savedAmount || 0,
+      displayDate: now.toLocaleDateString('id-ID', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    };
 
-const addCicilan = (newCicilan) => {
-    setCicilan(prevCicilan => [
-      ...prevCicilan,
-      {
-        ...newCicilan,
-        id: Date.now().toString(),
-      }
-    ]);
+    setTransactions(prevTransactions => [...prevTransactions, targetTransaction]);
+    return targetTransaction;
   };
 
+  const addCicilan = (newCicilan) => {
+    const now = new Date();
+    const formattedDate = formatTransactionDate(now);
+    
+    const cicilanTransaction = {
+      ...newCicilan,
+      id: Date.now().toString(),
+      type: 'Cicilan',
+      date: formattedDate,
+      displayDate: now.toLocaleDateString('id-ID', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    };
+
+    setTransactions(prevTransactions => [...prevTransactions, cicilanTransaction]);
+    return cicilanTransaction;
+  };
+
+  const updateCicilan = (updatedCicilan) => {
+    setTransactions(prevTransactions => 
+      prevTransactions.map(transaction => 
+        transaction.id === updatedCicilan.id ? { ...transaction, ...updatedCicilan } : transaction
+      )
+    );
+  };
   const getTotalBalance = () => {
     return transactions.reduce((total, transaction) => {
       if (transaction.type === 'Pemasukan') {
@@ -81,30 +104,55 @@ const addCicilan = (newCicilan) => {
       .reduce((total, transaction) => total + transaction.amount, 0);
   };
 
-  // Calculate total target amount
-  const getTotalTargetAmount = () => {
-    return targets.reduce((total, target) => total + target.targetAmount, 0);
+  const getCicilanTransactions = () => {
+    return transactions.filter(transaction => transaction.type === 'Cicilan');
   };
 
-  // Calculate total saved amount for all targets
+  const getTotalCicilan = () => {
+    return transactions
+      .filter(transaction => transaction.type === 'Cicilan')
+      .reduce((total, transaction) => total + transaction.amount, 0);
+  };
+
+  const getTargetTransactions = () => {
+    return transactions.filter(transaction => transaction.type === 'Target');
+  };
+
+  const getTotalTargetAmount = () => {
+    return transactions
+      .filter(transaction => transaction.type === 'Target')
+      .reduce((total, transaction) => total + (transaction.targetAmount || 0), 0);
+  };
+
   const getTotalSavedAmount = () => {
-    return targets.reduce((total, target) => total + (target.savedAmount || 0), 0);
+    return transactions
+      .filter(transaction => transaction.type === 'Target')
+      .reduce((total, transaction) => total + (transaction.savedAmount || 0), 0);
+  };
+
+  const getTotalTransferred = () => {
+    return transactions
+      .filter(transaction => transaction.type === 'Transfer')
+      .reduce((total, transaction) => total + transaction.amount, 0);
   };
 
   return (
     <TransactionsContext.Provider
       value={{
         transactions,
-        targets,
         addTransaction,
         addTarget,
+        addCicilan,
+        updateCicilan,
         getTotalBalance,
         getTotalIncome,
         getTotalExpense,
-        cicilan,
-        addCicilan, 
+        getCicilanTransactions,
+        getTotalCicilan,
+        getTargetTransactions,
         getTotalTargetAmount,
         getTotalSavedAmount,
+        getTotalTransferred,
       }}
     >
       {children}

@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, TextInput, Alert, ImageBackground } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, TextInput, Alert, ImageBackground, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { useTransactions } from '../../contexts/TransactionsContext';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 // Komponen Input Kustom
 const LabeledInput = ({ label, placeholder, value, onChangeText, keyboardType = 'default' }) => (
@@ -23,8 +25,44 @@ const TambahTargetScreen = ({ navigation }) => {
   const [name, setName] = useState('');
   const [targetAmount, setTargetAmount] = useState('');
   const [targetDate, setTargetDate] = useState('');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   
   const { addTarget } = useTransactions();
+
+  const formatDate = (date) => {
+    return date.toLocaleDateString('id-ID', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    }).replace(/\//g, '-');
+  };
+
+  const handleTargetDateChange = (event, date) => {
+    setShowDatePicker(Platform.OS === 'ios');
+    if (date) {
+      setSelectedDate(date);
+      setTargetDate(formatDate(date));
+    }
+  };
+
+  const handleStartDateChange = (event, date) => {
+    setShowStartDatePicker(Platform.OS === 'ios');
+    if (date) {
+      setStartDate(formatDate(date));
+    }
+  };
+
+  const handleEndDateChange = (event, date) => {
+    setShowEndDatePicker(Platform.OS === 'ios');
+    if (date) {
+      setEndDate(formatDate(date));
+    }
+  };
 
   const handleSave = () => {
     if (!name || !targetAmount) {
@@ -98,15 +136,37 @@ const TambahTargetScreen = ({ navigation }) => {
                   <Text style={styles.cardTitle}>Periode Transaksi :</Text>
                 </View>
                 <View style={styles.dateContainer}>
-                  <TouchableOpacity style={styles.datePicker}>
+                  <TouchableOpacity
+                    style={styles.datePicker}
+                    onPress={() => setShowStartDatePicker(true)}
+                  >
                     <Text style={styles.dateLabel}>Dari tanggal :</Text>
-                    <Text style={styles.dateValue}>31-07-2025</Text>
+                    <Text style={styles.dateValue}>{startDate || 'DD-MM-YYYY'}</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.datePicker}>
-                    <Text style={styles.dateLabel}>Sampai tanggal :</Text>
-                    <Text style={styles.dateValue}>31-07-2025</Text>
+                  <TouchableOpacity
+                    style={styles.datePickerEnd}
+                    onPress={() => setShowEndDatePicker(true)}
+                  >
+                    <Text style={[styles.dateLabel, { textAlign: 'right' }]}>Sampai tanggal :</Text>
+                    <Text style={[styles.dateValue, { textAlign: 'right' }]}>{endDate || 'DD-MM-YYYY'}</Text>
                   </TouchableOpacity>
                 </View>
+                {showStartDatePicker && (
+                  <DateTimePicker
+                    value={new Date()}
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={handleStartDateChange}
+                  />
+                )}
+                {showEndDatePicker && (
+                  <DateTimePicker
+                    value={new Date()}
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={handleEndDateChange}
+                  />
+                )}
               </View>
 
               <LabeledInput 
@@ -122,12 +182,26 @@ const TambahTargetScreen = ({ navigation }) => {
                 onChangeText={handleAmountChange}
                 keyboardType="numeric"
               />
-              <LabeledInput 
-                label="Tanggal Target (opsional)"
-                placeholder="DD-MM-YYYY"
-                value={targetDate}
-                onChangeText={setTargetDate}
-              />
+              <View style={styles.inputRow}>
+                <Text style={styles.inputLabel}>Tanggal Target</Text>
+                <TouchableOpacity 
+                  style={styles.dateInput}
+                  onPress={() => setShowDatePicker(true)}
+                >
+                  <Text style={[styles.input, { color: targetDate ? '#333' : '#A9A9A9' }]}>
+                    {targetDate || 'DD-MM-YYYY'}
+                  </Text>
+                </TouchableOpacity>
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={selectedDate}
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={handleTargetDateChange}
+                    minimumDate={new Date()}
+                  />
+                )}
+              </View>
 
               <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
                 <MaterialCommunityIcons name="content-save-outline" size={22} color="white" style={{marginRight: 10}} />
@@ -202,9 +276,16 @@ const styles = StyleSheet.create({
   dateContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 15,
   },
   datePicker: {
     width: '48%',
+    alignItems: 'flex-start',
+  },
+  datePickerEnd: {
+    width: '48%',
+    alignItems: 'flex-end',
   },
   dateLabel: {
     fontSize: 14,
@@ -215,6 +296,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
     marginTop: 5,
+  },
+  dateInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: 'white',
+    borderRadius: 5,
+    backgroundColor: '#FFFFFF',
   },
   formCard: {
     backgroundColor: '#F5F5F5',
@@ -246,8 +334,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingVertical: 12,
     fontSize: 16,
-    color:'#D0D0D0',
-    backgroundColor:'#FFFFFF'
+    color: '#333',
+    backgroundColor: '#FFFFFF'
   },
   saveButton: {
     flexDirection: 'row',

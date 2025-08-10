@@ -27,25 +27,30 @@ const LabeledInput = ({ label, placeholder, value, onChangeText, keyboardType = 
   </View>
 );
 
-const TambahCicilanScreen = ({ navigation }) => {
-  const [namaCicilan, setNamaCicilan] = useState('');
-  const [totalCicilan, setTotalCicilan] = useState('');
-  const [jatuhTempo, setJatuhTempo] = useState('');
-  const [catatan, setCatatan] = useState('');
-  const [showDatePicker, setShowDatePicker] = useState(false);
+const CicilanDetailScreen = ({ route, navigation}) => {
+    const { cicilan } = route.params || {};
+    const isEditMode = !!cicilan;
   
-  const { addCicilan } = useTransactions();
+    const [namaCicilan, setNamaCicilan] = useState(cicilan?.name || '');
+    const [totalCicilan, setTotalCicilan] = useState(cicilan?.totalCicilan?.toString() || '');
+    const [jatuhTempo, setJatuhTempo] = useState(cicilan?.dueDate || '');
+    const [catatan, setCatatan] = useState(cicilan?.description || '');
+    const [showDatePicker, setShowDatePicker] = useState(false);
+  
+    const { addCicilan, updateCicilan } = useTransactions();
+  
+  
+ 
 
-  const handleDateChange = (event, selectedDate) => {
-    setShowDatePicker(Platform.OS === 'ios');
-    if (selectedDate) {
-      // Format date to DD-MM-YYYY
-      const day = String(selectedDate.getDate()).padStart(2, '0');
-      const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
-      const year = selectedDate.getFullYear();
-      setJatuhTempo(`${day}-${month}-${year}`);
-    }
-  };
+    const handleDateChange = (event, selectedDate) => {
+        setShowDatePicker(Platform.OS === 'ios');
+        if (selectedDate) {
+          const day = String(selectedDate.getDate()).padStart(2, '0');
+          const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+          const year = selectedDate.getFullYear();
+          setJatuhTempo(`${day}-${month}-${year}`);
+        }
+      };
 
   const showDatepicker = () => {
     setShowDatePicker(true);
@@ -64,21 +69,26 @@ const TambahCicilanScreen = ({ navigation }) => {
       return;
     }
 
-    const newCicilan = {
+    const cicilanData = {
+      id: cicilan?.id || Date.now().toString(),
       name: namaCicilan,
-      totalCicilan: totalCicilan,
-      paidAmount: 0,
+      totalCicilan: totalAmount,
+      paidAmount: cicilan?.paidAmount || 0,
       dueDate: jatuhTempo,
       description: catatan,
     };
 
-    console.log('Menyimpan cicilan baru:', newCicilan);
-    
-    addCicilan(newCicilan);
-    
-    Alert.alert('Sukses', 'Cicilan berhasil ditambahkan.', [
-      { text: 'OK', onPress: () => navigation.goBack() }
-    ]);
+    if (isEditMode) {
+      updateCicilan(cicilanData);
+      Alert.alert('Sukses', 'Cicilan berhasil diperbarui.', [
+        { text: 'OK', onPress: () => navigation.goBack() }
+      ]);
+    } else {
+      addCicilan(cicilanData);
+      Alert.alert('Sukses', 'Cicilan berhasil ditambahkan.', [
+        { text: 'OK', onPress: () => navigation.goBack() }
+      ]);
+    }
   };
 
   // Format input jumlah dengan titik sebagai pemisah ribuan
@@ -130,40 +140,25 @@ const TambahCicilanScreen = ({ navigation }) => {
                          </View>
                     
 
-              <LabeledInput 
-                label="Nama Cicilan: "
-                placeholder="Iphone 12"
-                value={namaCicilan}
-                onChangeText={setNamaCicilan}
-              />
-              <LabeledInput 
-                label="Total Cicilan"
-                placeholder="Rp"
-                value={formatCurrencyInput(totalCicilan)}
-                onChangeText={(text) => setTotalCicilan(text.replace(/\./g, ''))}
-                keyboardType="numeric"
-              />
-              <LabeledInput 
-                label="Jatuh Tempo"
-                placeholder="Pilih tanggal"
-                value={jatuhTempo}
-                onPress={showDatepicker}
-              />
-              {showDatePicker && (
-                <DateTimePicker
-                  value={new Date()}
-                  mode="date"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  onChange={handleDateChange}
-                  minimumDate={new Date()}
-                />
-              )}
-              <LabeledInput 
-                label="Catatan"
-                placeholder="Tambah catatan (opsional)"
-                value={catatan}
-                onChangeText={setCatatan}
-              />
+                         <LabeledInput 
+        label="Nama Cicilan"
+        placeholder="Contoh: Cicilan Motor"
+        value={namaCicilan}
+        onChangeText={setNamaCicilan}
+      />
+      <LabeledInput 
+        label="Total Cicilan"
+        placeholder="Rp"
+        value={formatCurrencyInput(totalCicilan)}
+        onChangeText={(text) => setTotalCicilan(text.replace(/\./g, ''))}
+        keyboardType="numeric"
+      />
+      <LabeledInput 
+        label="Jatuh Tempo"
+        placeholder="Pilih tanggal"
+        value={jatuhTempo}
+        onPress={showDatepicker}
+      />
 
               <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
                 <MaterialCommunityIcons name="content-save-outline" size={22} color="white" style={{marginRight: 10}} />
@@ -310,4 +305,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default TambahCicilanScreen;
+export default CicilanDetailScreen;

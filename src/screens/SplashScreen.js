@@ -20,7 +20,7 @@ const SplashScreen = ({ navigation }) => {
       <StatusBar style="light" />
       <Image
         // Pastikan Anda memiliki file logo ini di assets
-        source={require('../assets/logo uangku-PUTIH-02.png')}
+        source={require('../assets/uangkuPutih.png')}
         style={styles.logo}
       />
     </SafeAreaView>

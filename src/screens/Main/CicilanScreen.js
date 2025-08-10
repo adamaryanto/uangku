@@ -12,6 +12,7 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTransactions } from '../../contexts/TransactionsContext';
+import { useNavigation } from '@react-navigation/native';
 // Data target
 const targets = [
   { id: '1', name: 'Iphone 12 pro max', targetAmount: 14000000, savedAmount: 6000000, date: '01-01-2025' },
@@ -37,44 +38,61 @@ const ProgressBar = ({ progress }) => (
 );
 
 const CicilanScreen = ({ navigation }) => {
-  
   const [showAll, setShowAll] = useState(false);
   const [isMenuVisible, setIsMenuVisible] = useState(false);
 
-  // --- DIUBAH --- Ambil data 'cicilan' dari context
-  const { cicilan = [] } = useTransactions(); 
+  // Get cicilan data from context
+  const { getCicilanTransactions } = useTransactions();
+  const cicilan = getCicilanTransactions();
 
   const cicilanToShow = showAll ? cicilan : cicilan.slice(0, 2);
-    const totalCicilanAktif = cicilan
-    .filter(item => item.paidAmount < item.totalAmount)
-    .reduce((sum, item) => sum + item.totalAmount, 0);
+  
+  // Calculate total active cicilan
+  const totalCicilanAktif = cicilan
+    .filter(item => (item.paidAmount || 0) < (item.totalCicilan || 0))
+    .reduce((sum, item) => sum + ((item.totalCicilan || 0) - (item.paidAmount || 0)), 0);
+
   const handleNavigate = (screenName) => {
     setIsMenuVisible(false);
     navigation.navigate(screenName);
   };
- const renderCicilanItem = ({ item }) => {
-    const isPaidOff = item.paidAmount >= item.totalAmount;
-    const progress = isPaidOff ? 100 : (item.paidAmount / item.totalAmount) * 100;
+
+  const renderCicilanItem = ({ item }) => {
+    const total = parseFloat(item.totalCicilan || 0);
+    const paid = parseFloat(item.paidAmount || 0);
+    const progress = total > 0 ? (paid / total) * 100 : 0;
+    const isPaidOff = paid >= total;
 
     return (
-      <TouchableOpacity style={styles.cicilanItemCard}>
-        <View style={styles.cicilanItemHeader}>
-            <View style={styles.cicilanIconContainer}>
-                <MaterialCommunityIcons name="credit-card-multiple-outline" size={24} color="#005AE0" />
-            </View>
-            <View style={styles.cicilanItemDetails}>
-                <Text style={styles.cicilanItemName}>{item.name}</Text>
-                <Text style={styles.cicilanItemPaid}>
-                  {formatCurrency(item.paidAmount)} / {formatCurrency(item.totalAmount)}
-                </Text>
-            </View>
-            <View style={styles.cicilanItemDueDateContainer}>
-                <Text style={styles.cicilanItemDueDateLabel}>Jatuh Tempo:</Text>
-                <Text style={[styles.cicilanItemDueDate, {color: isPaidOff ? '#27AE60' : '#E74C3C'}]}>{item.dueDate}</Text>
-            </View>
+      <TouchableOpacity 
+      style={styles.targetItemRow}
+      onPress={() => {
+        console.log('Item clicked', item); // Add this line
+        navigation.navigate('CicilanDetail', { cicilan: item });
+      }}
+    >
+      <View style={styles.targetItemHeader}>
+        <View style={styles.targetIconContainer}>
+          <MaterialCommunityIcons name="credit-card-multiple-outline" size={24} color="#005AE0" />
         </View>
+        <View style={styles.targetItemDetails} >
+          <Text style={styles.targetItemName}>{item.name || 'Tanpa Nama'}</Text>
+          <Text style={styles.targetItemSaved}>{formatCurrency(paid)}</Text>
+        </View>
+        <View style={styles.targetItemAmountContainer}>
+          <Text style={styles.targetItemDate}>Jatuh Tempo: {item.dueDate}</Text>
+          <Text style={styles.targetItemTarget}>{formatCurrency(total)}</Text>
+          <Text style={[styles.targetItemDate, { color: isPaidOff ? '#27AE60' : '#E74C3C' }]}>
+            {isPaidOff ? 'Lunas' : 'Belum Lunas'}
+          </Text>
+        </View>
+      </View>
+      <View style={styles.progressContainer}>
+        <Text style={styles.progressText}>{Math.min(100, Math.floor(progress))}%</Text>
         <ProgressBar progress={progress} />
-      </TouchableOpacity>
+        <Text style={styles.progressText}>100%</Text>
+      </View>
+    </TouchableOpacity>
     );
   };
   return (
@@ -146,25 +164,32 @@ const CicilanScreen = ({ navigation }) => {
           <View style={styles.allTargetsCard}>
             <Text style={styles.targetListTitle}>Cicilan anda :</Text>
             {cicilanToShow.map((item) => {
-              const progress = (item.savedAmount / item.targetAmount) * 100;
+              const total = parseFloat(item.totalCicilan || 0);
+              const paid = parseFloat(item.paidAmount || 0);
+              const progress = total > 0 ? (paid / total) * 100 : 0;
+              const isPaidOff = paid >= total;
+              
               return (
                 <View key={item.id} style={styles.targetItemRow}>
                   <View style={styles.targetItemHeader}>
                     <View style={styles.targetIconContainer}>
-                      <MaterialCommunityIcons name="briefcase-outline" size={24} color="#005AE0" />
+                      <MaterialCommunityIcons name="credit-card-multiple-outline" size={24} color="#005AE0" />
                     </View>
                     <View style={styles.targetItemDetails}>
-                      <Text style={styles.targetItemName}>{item.name}</Text>
-                      <Text style={styles.targetItemSaved}>{formatCurrency(item.savedAmount)}</Text>
+                      <Text style={styles.targetItemName}>{item.name || 'Tanpa Nama'}</Text>
+                      <Text style={styles.targetItemSaved}>{formatCurrency(paid)}</Text>
                     </View>
                     <View style={styles.targetItemAmountContainer}>
-                      <Text style={styles.targetItemTarget}>{formatCurrency(item.targetAmount)}</Text>
-                      <Text style={styles.targetItemDate}>Tanggal: {item.date}</Text>
+                      <Text style={styles.targetItemDate}>Jatuh Tempo: {item.dueDate}</Text>
+                      <Text style={styles.targetItemTarget}>{formatCurrency(total)}</Text>
+                      <Text style={[styles.targetItemDate, { color: isPaidOff ? '#27AE60' : '#E74C3C' }]}>
+                        {isPaidOff ? 'Lunas' : 'Belum Lunas'}
+                      </Text>
                     </View>
                   </View>
 
                   <View style={styles.progressContainer}>
-                    <Text style={styles.progressText}>{Math.floor(progress)}%</Text>
+                    <Text style={styles.progressText}>{Math.min(100, Math.floor(progress))}%</Text>
                     <ProgressBar progress={progress} />
                     <Text style={styles.progressText}>100%</Text>
                   </View>
