@@ -1,31 +1,59 @@
-import React, { useState, useContext } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, TextInput, Alert, ImageBackground } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, TextInput, Alert, ImageBackground, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useTransactions } from '../../contexts/TransactionsContext';
 
 // Komponen Input Kustom
-const LabeledInput = ({ label, placeholder, value, onChangeText, keyboardType = 'default' }) => (
-  <View style={styles.inputRow}>
-    <Text style={styles.inputLabel}>{label}</Text>
-    <TextInput
-      style={styles.input}
-      placeholder={placeholder}
-      placeholderTextColor="#A9A9A9"
-      value={value}
-      onChangeText={onChangeText}
-      keyboardType={keyboardType}
-    />
-  </View>
-);
+const LabeledInput = ({ label, placeholder, value, onChangeText, keyboardType = 'default' }) => {
+  // Text color is black when there's text, grey when empty
+  const textColor = value ? '#000000' : '#D0D0D0';
+  
+  return (
+    <View style={styles.inputRow}>
+      <Text style={styles.inputLabel}>{label}</Text>
+      <TextInput
+        style={[
+          styles.input, 
+          { color: textColor }
+        ]}
+        placeholder={placeholder}
+        placeholderTextColor="#A9A9A9"
+        value={value}
+        onChangeText={onChangeText}
+        keyboardType={keyboardType}
+      />
+    </View>
+  );
+};
 
 const PemasukanSaldoScreen = ({ navigation }) => {
   const [kategori, setKategori] = useState('');
   const [sumberDana, setSumberDana] = useState('');
   const [jumlah, setJumlah] = useState('');
   const [catatan, setCatatan] = useState('');
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
   
   const { addTransaction } = useTransactions();
+
+  const handleDateChange = (event, date) => {
+    if (event.type === 'set') {
+      const currentDate = date || selectedDate;
+      setSelectedDate(currentDate);
+    }
+    setShowDatePicker(false);
+  };
+
+  const handleTimeChange = (event, time) => {
+    if (event.type === 'set') {
+      const currentTime = time || selectedDate;
+      setSelectedDate(currentTime);
+    }
+    setShowTimePicker(false);
+  };
 
   const handleSave = () => {
     if (!kategori || !sumberDana || !jumlah) {
@@ -46,7 +74,15 @@ const PemasukanSaldoScreen = ({ navigation }) => {
       amount: amount,
       description: catatan || `Pemasukan dari ${sumberDana}`,
       icon: 'cash-plus',
-      source: sumberDana
+      source: sumberDana,
+      date: selectedDate.toISOString().split('T')[0], // YYYY-MM-DD format
+      displayDate: selectedDate.toLocaleDateString('id-ID', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
     };
 
     addTransaction(newTransaction);
@@ -87,9 +123,12 @@ const PemasukanSaldoScreen = ({ navigation }) => {
           <View style={styles.contentContainer}>
             <View style={styles.formCard}>
               <View style={styles.dateRow}>
-                <TouchableOpacity style={styles.datePicker}>
-                  <Text style={styles.dateValue}>
-                    {new Date().toLocaleDateString('id-ID', {
+                <TouchableOpacity 
+                  style={styles.datePicker}
+                  onPress={() => setShowDatePicker(true)}
+                >
+                  <Text style={[styles.dateValue, { color: '#000000' }]}>
+                    {selectedDate.toLocaleDateString('id-ID', {
                       weekday: 'long',
                       day: '2-digit',
                       month: 'long',
@@ -98,14 +137,36 @@ const PemasukanSaldoScreen = ({ navigation }) => {
                   </Text>
                   <MaterialCommunityIcons name="calendar-month-outline" size={24} color="#333" />
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.timePicker}>
-                  <Text style={styles.timeValue}>
-                    {new Date().toLocaleTimeString('id-ID', {
+                <TouchableOpacity 
+                  style={styles.timePicker}
+                  onPress={() => setShowTimePicker(true)}
+                >
+                  <Text style={[styles.timeValue, { color: '#000000' }]}>
+                    {selectedDate.toLocaleTimeString('id-ID', {
                       hour: '2-digit',
                       minute: '2-digit'
                     })}
                   </Text>
                 </TouchableOpacity>
+
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={selectedDate}
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={handleDateChange}
+                    maximumDate={new Date()}
+                  />
+                )}
+
+                {showTimePicker && (
+                  <DateTimePicker
+                    value={selectedDate}
+                    mode="time"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={handleTimeChange}
+                  />
+                )}
               </View>
 
               <LabeledInput 
@@ -250,8 +311,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingVertical: 12,
     fontSize: 16,
-    color:'#D0D0D0',
-    backgroundColor:'#FFFFFF'
+    color: '#D0D0D0',
+    backgroundColor: '#FFFFFF',
+  },
+  inputFocused: {
+    borderColor: '#005AE0',
   },
   saveButton: {
     flexDirection: 'row',
