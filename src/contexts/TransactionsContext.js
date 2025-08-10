@@ -1,6 +1,24 @@
 import React, { createContext, useState, useContext } from 'react';
 
-const TransactionsContext = createContext();
+const TransactionsContext = createContext({
+  transactions: [],
+  addTransaction: () => {},
+  addTarget: () => {},
+  addCicilan: () => {},
+  updateCicilan: () => {},
+  getTotalBalance: () => 0,
+  getTotalIncome: () => 0,
+  getTotalExpense: () => 0,
+  getCicilanTransactions: () => [],
+  getTotalCicilan: () => 0,
+  getTargetTransactions: () => [],
+  getTotalTargetAmount: () => 0,
+  getTotalSavedAmount: () => 0,
+  getTotalTransferred: () => 0,
+  updateTargetProgress: () => {},
+  updateCicilanPayment: () => {},
+});
+
 
 export const TransactionsProvider = ({ children }) => {
   const [transactions, setTransactions] = useState([]);
@@ -136,6 +154,54 @@ export const TransactionsProvider = ({ children }) => {
       .reduce((total, transaction) => total + transaction.amount, 0);
   };
 
+  const updateTargetProgress = (targetId, progressUpdate) => {
+    setTransactions(prevTransactions => 
+      prevTransactions.map(transaction => {
+        if (transaction.id === targetId) {
+          // Create or update the progress history
+          const progressHistory = Array.isArray(transaction.progressHistory) 
+            ? [...transaction.progressHistory, progressUpdate]
+            : [progressUpdate];
+            
+          // Calculate new saved amount
+          const newSavedAmount = (transaction.savedAmount || 0) + progressUpdate.amount;
+          
+          return {
+            ...transaction,
+            savedAmount: newSavedAmount,
+            progressHistory,
+            lastUpdated: new Date().toISOString()
+          };
+        }
+        return transaction;
+      })
+    );
+  };
+
+  const updateCicilanPayment = (cicilanId, payment) => {
+    setTransactions(prevTransactions => 
+      prevTransactions.map(transaction => {
+        if (transaction.id === cicilanId) {
+          // Create or update the payment history
+          const paymentHistory = Array.isArray(transaction.paymentHistory) 
+            ? [...transaction.paymentHistory, payment]
+            : [payment];
+            
+          // Calculate new paid amount
+          const newPaidAmount = (transaction.paidAmount || 0) + payment.amount;
+          
+          return {
+            ...transaction,
+            paidAmount: newPaidAmount,
+            paymentHistory,
+            lastUpdated: new Date().toISOString()
+          };
+        }
+        return transaction;
+      })
+    );
+  };
+
   return (
     <TransactionsContext.Provider
       value={{
@@ -153,6 +219,8 @@ export const TransactionsProvider = ({ children }) => {
         getTotalTargetAmount,
         getTotalSavedAmount,
         getTotalTransferred,
+        updateTargetProgress,
+        updateCicilanPayment,
       }}
     >
       {children}
@@ -161,11 +229,7 @@ export const TransactionsProvider = ({ children }) => {
 };
 
 export const useTransactions = () => {
-  const context = useContext(TransactionsContext);
-  if (!context) {
-    throw new Error('useTransactions must be used within a TransactionsProvider');
-  }
-  return context;
+    return useContext(TransactionsContext); // selalu ada default, jadi aman
 };
 
 export default TransactionsContext;
