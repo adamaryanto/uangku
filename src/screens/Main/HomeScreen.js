@@ -52,11 +52,12 @@ const HomeScreen = ({ navigation, isVisible, onClose }) => {
     }
   };
 
-  // Filter transactions by selected date
+  // Filter transactions by selected date and exclude target transactions
   useEffect(() => {
     const selectedDateStr = formatDate(selectedDate);
     const filtered = transactions.filter(transaction => {
-      return transaction.date === selectedDateStr;
+      // Only include transactions that are not targets and match the selected date
+      return transaction.type !== 'Target' && transaction.date === selectedDateStr;
     });
     setFilteredTransactions(filtered);
   }, [selectedDate, transactions]);
@@ -88,10 +89,16 @@ const HomeScreen = ({ navigation, isVisible, onClose }) => {
 
   // Komponen untuk setiap item transaksi
   const renderTransactionItem = ({ item, index }) => {
+    // Skip rendering if this is a target transaction (should be filtered out already)
+    if (item.type === 'Target') return null;
+    
     const isIncome = item.type === 'Pemasukan';
     const isExpense = item.type === 'Pengeluaran';
     const amountColor = isIncome ? '#27AE60' : (isExpense ? '#E74C3C' : '#3498DB');
     const amountSign = isIncome ? '+' : (isExpense ? '-' : '');
+    
+    // Ensure amount is a valid number
+    const amount = Number(item.amount) || 0;
 
     // Menentukan warna teks tipe transaksi
     let typeColor = '#3498DB'; // Default untuk Transfer
@@ -117,7 +124,7 @@ const HomeScreen = ({ navigation, isVisible, onClose }) => {
         </View>
         <View style={styles.transactionAmountContainer}>
           <Text style={[styles.transactionAmount, { color: amountColor }]}>
-            {`${amountSign}${formatCurrency(item.amount)}`}
+            {`${amountSign}${formatCurrency(amount)}`}
           </Text>
           <Text style={styles.transactionDate}>Tanggal: {item.displayDate || item.date}</Text>
         </View>
@@ -126,7 +133,11 @@ const HomeScreen = ({ navigation, isVisible, onClose }) => {
     );
   };
 
-  const transactionsToShow = showAllTransactions ? transactions: filteredTransactions.slice(0, 3);
+  // Filter out target transactions from the main list
+  const nonTargetTransactions = transactions.filter(t => t.type !== 'Target');
+  const transactionsToShow = showAllTransactions 
+    ? nonTargetTransactions 
+    : nonTargetTransactions.slice(0, 3);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -246,23 +257,23 @@ const HomeScreen = ({ navigation, isVisible, onClose }) => {
             )}
 
             {/* Tombol Lihat Lainnya */}
-            {filteredTransactions.length > 3 && !showAllTransactions && (
+            {nonTargetTransactions.length > 3 && !showAllTransactions ? (
               <TouchableOpacity 
                 style={styles.seeMoreButton} 
                 onPress={() => setShowAllTransactions(true)}
               >
                 <Text style={styles.seeMoreText}>Lihat Lainnya</Text>
               </TouchableOpacity>
-            )}
+            ) : null}
 
-            {showAllTransactions && (
+            {showAllTransactions ? (
               <TouchableOpacity 
                 style={styles.seeMoreButton} 
                 onPress={() => setShowAllTransactions(false)}
               >
                 <Text style={styles.seeMoreText}>Tampilkan Lebih Sedikit</Text>
               </TouchableOpacity>
-            )}
+            ) : null}
           </View>
         </View>
       </View>
