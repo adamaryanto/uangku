@@ -1,23 +1,32 @@
 import React, { useState, useContext } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, TextInput, Alert, ImageBackground } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, TextInput, Alert, ImageBackground, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTransactions } from '../../contexts/TransactionsContext';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 // Komponen Input Kustom
-const LabeledInput = ({ label, placeholder, value, onChangeText, keyboardType = 'default' }) => (
-  <View style={styles.inputRow}>
-    <Text style={styles.inputLabel}>{label}</Text>
-    <TextInput
-      style={styles.input}
-      placeholder={placeholder}
-      placeholderTextColor="#A9A9A9"
-      value={value}
-      onChangeText={onChangeText}
-      keyboardType={keyboardType}
-    />
-  </View>
-);
+const LabeledInput = ({ label, placeholder, value, onChangeText, keyboardType = 'default' }) => {
+  // Text color is black when there's text, grey when empty
+  const textColor = value ? '#000000' : '#D0D0D0';
+  
+  return (
+    <View style={styles.inputRow}>
+      <Text style={styles.inputLabel}>{label}</Text>
+      <TextInput
+        style={[
+          styles.input, 
+          { color: textColor }
+        ]}
+        placeholder={placeholder}
+        placeholderTextColor="#A9A9A9"
+        value={value}
+        onChangeText={onChangeText}
+        keyboardType={keyboardType}
+      />
+    </View>
+  );
+};
 
 const TransferSaldoScreen = ({ navigation }) => {
   const { addTransaction } = useTransactions();
@@ -27,6 +36,23 @@ const TransferSaldoScreen = ({ navigation }) => {
   const [catatan, setCatatan] = useState('');
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+
+  const handleDateChange = (event, date) => {
+    if (event.type === 'set') {
+      const currentDate = date || selectedDate;
+      setSelectedDate(currentDate);
+    }
+    setShowDatePicker(false);
+  };
+
+  const handleTimeChange = (event, time) => {
+    if (event.type === 'set') {
+      const currentTime = time || selectedDate;
+      setSelectedDate(currentTime);
+    }
+    setShowTimePicker(false);
+  };
 
   const formatDate = (date) => {
     return date.toLocaleDateString('id-ID', {
@@ -49,7 +75,7 @@ const TransferSaldoScreen = ({ navigation }) => {
       return;
     }
 
-    const amount = parseFloat(jumlah.replace(/[^0-9]/g, ''));
+    const amount = parseFloat(jumlah.replace(/\./g, '').replace(',', '.'));
     if (isNaN(amount) || amount <= 0) {
       Alert.alert('Error', 'Jumlah transfer tidak valid');
       return;
@@ -64,14 +90,30 @@ const TransferSaldoScreen = ({ navigation }) => {
       description: catatan || `Transfer dari ${sumberDana} ke ${tujuan}`,
       category: 'Transfer',
       date: selectedDate.toISOString().split('T')[0],
-      displayDate: formatDate(selectedDate),
-      time: formatTime(selectedDate)
+      displayDate: selectedDate.toLocaleDateString('id-ID', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
     });
 
     // Show success message and navigate back
     Alert.alert('Sukses', 'Transfer saldo berhasil dicatat.', [
       { text: 'OK', onPress: () => navigation.goBack() }
     ]);
+  };
+
+  // Format input jumlah dengan titik sebagai pemisah ribuan
+  const formatCurrencyInput = (text) => {
+    // Hapus semua karakter selain angka
+    const numericValue = text.replace(/[^0-9]/g, '');
+    
+    // Format dengan titik sebagai pemisah ribuan
+    const formattedValue = numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    
+    return formattedValue;
   };
 
   return (
@@ -89,7 +131,7 @@ const TransferSaldoScreen = ({ navigation }) => {
                         <Text style={styles.backButtonText}>Kembali</Text>
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>Transfer Saldo</Text>
-                    <Text style={styles.headerSubtitle}>Catat semua pendapatan yang kamu terima, seperti gaji, bonus, atau sumber lainnya.</Text>
+                    <Text style={styles.headerSubtitle}>Catat semua perpindahan dana antar rekening atau sumber dana yang kamu miliki.</Text>
                 </View>
 
                 {/* Konten form */}
@@ -100,24 +142,44 @@ const TransferSaldoScreen = ({ navigation }) => {
                               style={styles.datePicker}
                               onPress={() => setShowDatePicker(true)}
                             >
-                                <Text style={styles.dateValue}>{formatDate(selectedDate)}</Text>
+                                <Text style={[styles.dateValue, { color: '#000000' }]}>
+                                  {selectedDate.toLocaleDateString('id-ID', {
+                                    weekday: 'long',
+                                    day: '2-digit',
+                                    month: 'long',
+                                    year: 'numeric'
+                                  })}
+                                </Text>
                                 <MaterialCommunityIcons name="calendar-month-outline" size={24} color="#333" />
                             </TouchableOpacity>
-                            <View style={styles.timePicker}>
-                                <Text style={styles.timeValue}>{formatTime(selectedDate)}</Text>
-                            </View>
+                            <TouchableOpacity 
+                              style={styles.timePicker}
+                              onPress={() => setShowTimePicker(true)}
+                            >
+                                <Text style={[styles.timeValue, { color: '#000000' }]}>
+                                  {formatTime(selectedDate)}
+                                </Text>
+                            </TouchableOpacity>
+
+                            {showDatePicker && (
+                              <DateTimePicker
+                                value={selectedDate}
+                                mode="date"
+                                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                                onChange={handleDateChange}
+                                maximumDate={new Date()}
+                              />
+                            )}
+
+                            {showTimePicker && (
+                              <DateTimePicker
+                                value={selectedDate}
+                                mode="time"
+                                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                                onChange={handleTimeChange}
+                              />
+                            )}
                         </View>
-                        {showDatePicker && (
-                          <DateTimePicker
-                            value={selectedDate}
-                            mode="date"
-                            display="default"
-                            onChange={(event, date) => {
-                              setShowDatePicker(false);
-                              if (date) setSelectedDate(date);
-                            }}
-                          />
-                        )}
 
                         <LabeledInput 
                             label="Sumber dana:"
@@ -133,21 +195,21 @@ const TransferSaldoScreen = ({ navigation }) => {
                         />
                         <LabeledInput 
                             label="Jumlah"
-                            placeholder="Rp"
-                            value={jumlah}
-                            onChangeText={setJumlah}
+                            placeholder="0"
+                            value={formatCurrencyInput(jumlah)}
+                            onChangeText={(text) => setJumlah(text.replace(/\./g, ''))}
                             keyboardType="numeric"
                         />
                         <LabeledInput 
                             label="Catatan"
-                            placeholder="Catatan"
+                            placeholder="Tambah catatan (opsional)"
                             value={catatan}
                             onChangeText={setCatatan}
                         />
 
                         <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
                             <MaterialCommunityIcons name="content-save-outline" size={22} color="white" style={{marginRight: 10}} />
-                            <Text style={styles.saveButtonText}>Menyimpan</Text>
+                            <Text style={styles.saveButtonText}>Simpan</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -212,20 +274,22 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   datePicker: {
-    flex: 2,
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
     borderWidth: 1,
     borderColor: '#E0E0E0',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginRight: 10,
-    backgroundColor: '#FFF',
+    borderRadius: 5,
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    flex: 0.75,
+    backgroundColor:'#FFFFFF'
+  },
+  dateValue: {
+    fontSize: 16,
+    color: '#D0D0D0',
   },
   timePicker: {
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
@@ -235,7 +299,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     flex: 0.2,
     backgroundColor:'#FFFFFF',
-    
   },
   timeValue: {
     fontSize: 16,
@@ -259,8 +322,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingVertical: 12,
     fontSize: 16,
-    color:'#D0D0D0',
-    backgroundColor:'#FFFFFF'
+    color: '#D0D0D0',
+    backgroundColor: '#FFFFFF',
   },
   saveButton: {
     flexDirection: 'row',
