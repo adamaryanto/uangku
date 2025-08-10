@@ -32,6 +32,8 @@ import PengeluaranSaldoScreen from '../screens/Main/PengeluaranSaldoScreen';
 import TambahCicilanScreen from '../screens/Main/TambahCicilanScreen'
 import PemasukanSaldoScreen from '../screens/Main/PemasukanSaldoScreen';
 import TambahTargetScreen from '../screens/Main/TambahTargetScreen';
+import UpdateTargetProgressScreen from '../screens/Main/UpdateTargetProgressScreen';
+import UpdateCicilanProgressScreen from '../screens/Main/UpdateCicilanProgressScreen';
 import CicilanDetailScreen from '../screens/Main/CicilanDetailScreen';
 const Stack = createNativeStackNavigator();
 
@@ -71,6 +73,22 @@ const AppNavigator = () => {
           <Stack.Screen name="PemasukanSaldo" component={PemasukanSaldoScreen} />
           <Stack.Screen name="TambahCicilan" component={TambahCicilanScreen} />
           <Stack.Screen name="TambahTarget" component={TambahTargetScreen} />
+          <Stack.Screen 
+            name="UpdateTargetProgress" 
+            component={UpdateTargetProgressScreen} 
+            options={{ 
+              title: 'Update Progress Target',
+              headerShown: false
+            }} 
+          />
+          <Stack.Screen 
+            name="UpdateCicilanProgress" 
+            component={UpdateCicilanProgressScreen} 
+            options={{ 
+              title: 'Update Pembayaran Cicilan',
+              headerShown: false
+            }} 
+          />
           <Stack.Screen name="CicilanDetail" component={CicilanDetailScreen} />
           {/* Layar-layar utama lainnya seperti Profile, Settings, dll. akan masuk di sini */}
         </Stack.Group>
