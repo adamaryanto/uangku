@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, TextInput, Alert, ImageBackground } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTransactions } from '../../contexts/TransactionsContext';
 
 // Komponen Input Kustom
 const LabeledInput = ({ label, placeholder, value, onChangeText, keyboardType = 'default' }) => (
@@ -19,17 +20,55 @@ const LabeledInput = ({ label, placeholder, value, onChangeText, keyboardType = 
 );
 
 const TransferSaldoScreen = ({ navigation }) => {
+  const { addTransaction } = useTransactions();
   const [sumberDana, setSumberDana] = useState('');
   const [tujuan, setTujuan] = useState('');
   const [jumlah, setJumlah] = useState('');
   const [catatan, setCatatan] = useState('');
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  const formatDate = (date) => {
+    return date.toLocaleDateString('id-ID', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric'
+    });
+  };
+
+  const formatTime = (date) => {
+    return date.toLocaleTimeString('id-ID', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
 
   const handleSave = () => {
     if (!sumberDana || !tujuan || !jumlah) {
       Alert.alert('Error', 'Sumber dana, tujuan, dan jumlah wajib diisi.');
       return;
     }
-    console.log('Menyimpan transfer:', { sumberDana, tujuan, jumlah, catatan });
+
+    const amount = parseFloat(jumlah.replace(/[^0-9]/g, ''));
+    if (isNaN(amount) || amount <= 0) {
+      Alert.alert('Error', 'Jumlah transfer tidak valid');
+      return;
+    }
+
+    // Add transfer transaction
+    addTransaction({
+      type: 'Transfer',
+      from: sumberDana,
+      to: tujuan,
+      amount: amount,
+      description: catatan || `Transfer dari ${sumberDana} ke ${tujuan}`,
+      category: 'Transfer',
+      date: selectedDate.toISOString().split('T')[0],
+      displayDate: formatDate(selectedDate),
+      time: formatTime(selectedDate)
+    });
+
+    // Show success message and navigate back
     Alert.alert('Sukses', 'Transfer saldo berhasil dicatat.', [
       { text: 'OK', onPress: () => navigation.goBack() }
     ]);
@@ -57,14 +96,28 @@ const TransferSaldoScreen = ({ navigation }) => {
                 <View style={styles.contentContainer}>
                     <View style={styles.formCard}>
                         <View style={styles.dateRow}>
-                            <TouchableOpacity style={styles.datePicker}>
-                                <Text style={styles.dateValue}>Senin, 09 Jan 2025</Text>
+                            <TouchableOpacity 
+                              style={styles.datePicker}
+                              onPress={() => setShowDatePicker(true)}
+                            >
+                                <Text style={styles.dateValue}>{formatDate(selectedDate)}</Text>
                                 <MaterialCommunityIcons name="calendar-month-outline" size={24} color="#333" />
                             </TouchableOpacity>
-                            <TouchableOpacity style={styles.timePicker}>
-                                <Text style={styles.timeValue}>11:04</Text>
-                            </TouchableOpacity>
+                            <View style={styles.timePicker}>
+                                <Text style={styles.timeValue}>{formatTime(selectedDate)}</Text>
+                            </View>
                         </View>
+                        {showDatePicker && (
+                          <DateTimePicker
+                            value={selectedDate}
+                            mode="date"
+                            display="default"
+                            onChange={(event, date) => {
+                              setShowDatePicker(false);
+                              if (date) setSelectedDate(date);
+                            }}
+                          />
+                        )}
 
                         <LabeledInput 
                             label="Sumber dana:"
@@ -159,22 +212,20 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   datePicker: {
+    flex: 2,
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
     borderWidth: 1,
     borderColor: '#E0E0E0',
-    borderRadius: 5,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    flex: 0.75,
-    backgroundColor:'#FFFFFF'
-  },
-  dateValue: {
-    fontSize: 16,
-    color: '#D0D0D0',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginRight: 10,
+    backgroundColor: '#FFF',
   },
   timePicker: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
