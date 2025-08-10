@@ -23,7 +23,7 @@ const RegistrasiScreen = ({ navigation }) => {
         alert('error', 'password tidak cocok')
         return
     }
-    navigation.navigate('SuccessRegis');
+    navigation.navigate('SuccessRegisScreen');
   }
 
   return (
