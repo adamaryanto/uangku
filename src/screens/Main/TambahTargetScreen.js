@@ -20,15 +20,13 @@ const LabeledInput = ({ label, placeholder, value, onChangeText, keyboardType = 
     />
   </View>
 );
-
+ 
 const TambahTargetScreen = ({ navigation }) => {
   const [name, setName] = useState('');
   const [targetAmount, setTargetAmount] = useState('');
-  const [targetDate, setTargetDate] = useState('');
-  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [notes, setNotes] = useState('');
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(new Date());
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   
@@ -83,7 +81,8 @@ const TambahTargetScreen = ({ navigation }) => {
       name: name.trim(),
       targetAmount: amount,
       savedAmount: 0,
-      date: targetDate || new Date().toLocaleDateString('id-ID')
+      date: new Date().toLocaleDateString('id-ID').replace(/\//g, '-'),
+      notes: notes.trim()
     };
 
     addTarget(newTarget);
@@ -182,25 +181,17 @@ const TambahTargetScreen = ({ navigation }) => {
                 onChangeText={handleAmountChange}
                 keyboardType="numeric"
               />
-              <View style={styles.inputRow}>
-                <Text style={styles.inputLabel}>Tanggal Target</Text>
-                <TouchableOpacity 
-                  style={styles.dateInput}
-                  onPress={() => setShowDatePicker(true)}
-                >
-                  <Text style={[styles.input, { color: targetDate ? '#333' : '#A9A9A9' }]}>
-                    {targetDate || 'DD-MM-YYYY'}
-                  </Text>
-                </TouchableOpacity>
-                {showDatePicker && (
-                  <DateTimePicker
-                    value={selectedDate}
-                    mode="date"
-                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                    onChange={handleTargetDateChange}
-                    minimumDate={new Date()}
-                  />
-                )}
+              <View style={[styles.inputRow, { alignItems: 'flex-start' }]}>
+                <Text style={[styles.inputLabel, { marginTop: 12 }]}>Catatan</Text>
+                <TextInput
+                  style={[styles.input, { textAlignVertical: 'top', paddingTop: 12 }]}
+                  placeholder="Tambah catatan (opsional)"
+                  placeholderTextColor="#A9A9A9"
+                  value={notes}
+                  onChangeText={setNotes}
+                  multiline
+                  numberOfLines={4}
+                />
               </View>
 
               <TouchableOpacity style={styles.saveButton} onPress={handleSave}>

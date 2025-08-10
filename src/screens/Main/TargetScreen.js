@@ -27,11 +27,22 @@ const formatCurrency = (number) => {
 // Komponen progress bar
 
 const TargetScreen = ({navigation}) => {
-  const ProgressBar = ({ progress }) => (
-    <View style={styles.progressBarBackground}>
-      <View style={[styles.progressBarFill, { width: `${progress}%` }]} />
-    </View>
-  );
+  const ProgressBar = ({ progress }) => {
+    const isComplete = progress >= 100;
+    return (
+      <View style={styles.progressBarBackground}>
+        <View 
+          style={[
+            styles.progressBarFill, 
+            { 
+              width: `${progress}%`,
+              backgroundColor: isComplete ? '#00C7AF' : '#FEB01A'
+            }
+          ]} 
+        />
+      </View>
+    );
+  };
   const [showAllTargets, setShowAllTargets] = React.useState(false);
   const [isMenuVisible, setIsMenuVisible] = useState(false);
   
@@ -43,34 +54,53 @@ const TargetScreen = ({navigation}) => {
   const targetsToShow = showAllTargets ? targets : targets.slice(0, 3);
   const totalTarget = getTotalTargetAmount();
   const totalSaved = getTotalSavedAmount();
-  const remainingTarget = Math.max(0, totalTarget - totalSaved);
+  // Calculate remaining target by summing up remaining amounts for each target
+  const remainingTarget = targets.reduce((total, target) => {
+    const remaining = Math.max(0, target.targetAmount - (target.savedAmount || 0));
+    return total + remaining;
+  }, 0);
   
   // Count completed and pending targets
   const completedTargets = targets.filter(t => t.savedAmount >= t.targetAmount).length;
   const pendingTargets = targets.length - completedTargets;
   const renderTargetItem = ({ item }) => {
     const progress = (item.savedAmount / item.targetAmount) * 100;
+    const remainingAmount = Math.max(0, item.targetAmount - item.savedAmount);
+    
     return (
-      <TouchableOpacity style={styles.targetItemCard}>
+      <View style={styles.targetItemCard}>
         <View style={styles.targetItemHeader}>
-            <View style={styles.targetIconContainer}>
-                <MaterialCommunityIcons name="bullseye-arrow" size={24} color="#005AE0" />
-            </View>
-            <View style={styles.targetItemDetails}>
-                <Text style={styles.targetItemName}>{item.name}</Text>
-                <Text style={styles.targetItemSaved}>{formatCurrency(item.savedAmount)}</Text>
-            </View>
-            <View style={styles.targetItemAmountContainer}>
-                <Text style={styles.targetItemTarget}>{formatCurrency(item.targetAmount)}</Text>
-                <Text style={styles.targetItemDate}>Tanggal: {item.date}</Text>
-            </View>
+          <View style={styles.targetIconContainer}>
+            <MaterialCommunityIcons name="bullseye-arrow" size={24} color="#005AE0" />
+          </View>
+          <View style={styles.targetItemDetails}>
+            <Text style={styles.targetItemName}>{item.name}</Text>
+            <Text style={styles.targetItemSaved}>Terkumpul: {formatCurrency(item.savedAmount)}</Text>
+            <Text style={styles.targetItemRemaining}>Sisa: {formatCurrency(remainingAmount)}</Text>
+          </View>
+          <View style={styles.targetItemAmountContainer}>
+            <Text style={styles.targetItemTarget}>Target: {formatCurrency(item.targetAmount)}</Text>
+            <Text style={styles.targetItemDate}>Selesai: {item.date}</Text>
+          </View>
+        </View>
+        <View style={styles.targetItemAmountContainer}>
+          <Text style={styles.targetItemTarget}>Target: {formatCurrency(item.targetAmount)}</Text>
+          <View style={styles.rightAlignedRow}>
+            <Text style={styles.targetItemDate}>Selesai: {item.date}</Text>
+            <TouchableOpacity 
+              onPress={() => navigation.navigate('UpdateTargetProgress', { target: item })}
+              style={styles.chevronButton}
+            >
+              <MaterialCommunityIcons name="chevron-right" size={24} color="#666" />
+            </TouchableOpacity>
+          </View>
         </View>
         <View style={styles.progressContainer}>
-            <Text style={styles.progressText}>{Math.floor(progress)}%</Text>
-            <ProgressBar progress={progress} />
-            <Text style={styles.progressText}>100%</Text>
+          <Text style={styles.progressText}>{Math.min(100, Math.floor(progress))}%</Text>
+          <ProgressBar progress={progress} />
+          <Text style={styles.progressText}>100%</Text>
         </View>
-      </TouchableOpacity>
+      </View>
     );
   };
   
@@ -148,6 +178,7 @@ const TargetScreen = ({navigation}) => {
             <Text style={styles.targetListTitle}>Target anda :</Text>
             {targetsToShow.map((item) => {
               const progress = Math.min(100, (item.savedAmount / item.targetAmount) * 100);
+              const remainingAmount = Math.max(0, item.targetAmount - item.savedAmount);
               return (
                 <View key={item.id} style={styles.targetItemRow}>
                   <View style={styles.targetItemHeader}>
@@ -156,16 +187,28 @@ const TargetScreen = ({navigation}) => {
                     </View>
                     <View style={styles.targetItemDetails}>
                       <Text style={styles.targetItemName}>{item.name}</Text>
-                      <Text style={styles.targetItemSaved}>{formatCurrency(item.savedAmount)}</Text>
+                      <Text style={styles.targetItemSaved}>Terkumpul: {formatCurrency(item.savedAmount)}</Text>
+                      <Text style={styles.targetItemRemaining}>Sisa: {formatCurrency(remainingAmount)}</Text>
                     </View>
                     <View style={styles.targetItemAmountContainer}>
-                      <Text style={styles.targetItemTarget}>{formatCurrency(item.targetAmount)}</Text>
+                      <Text style={styles.targetItemTarget}>Target: {formatCurrency(item.targetAmount)}</Text>
                       <Text style={styles.targetItemDate}>
                         {item.targetDate ? `Target: ${new Date(item.targetDate).toLocaleDateString('id-ID')}` : ''}
                       </Text>
                     </View>
                   </View>
 
+                  <View style={styles.targetItemAmountContainer}>
+                    <View style={styles.rightAlignedRow}>
+                      <Text style={styles.targetItemDate}>Selesai: {item.date}</Text>
+                      <TouchableOpacity 
+                        onPress={() => navigation.navigate('UpdateTargetProgress', { target: item })}
+                        style={styles.chevronButton}
+                      >
+                        <MaterialCommunityIcons name="chevron-right" size={24} color="#666" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
                   <View style={styles.progressContainer}>
                     <Text style={styles.progressText}>{Math.floor(progress)}%</Text>
                     <ProgressBar progress={progress} />
@@ -353,10 +396,15 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   targetItemCard: {
-    backgroundColor: 'white',
-    borderRadius: 15,
-    padding: 15,
-    marginBottom: 15,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   targetItemHeader: {
     flexDirection: 'row',
@@ -380,9 +428,16 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   targetItemSaved: {
-    fontSize: 14,
-    color: '#F39C12',
-    fontWeight: 'bold',
+    fontSize: 13,
+    color: '#005AE0',
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  targetItemRemaining: {
+    fontSize: 13,
+    color: '#E63950',
+    fontWeight: '500',
+    marginTop: 2,
   },
   targetItemAmountContainer: {
     alignItems: 'flex-end',
@@ -395,6 +450,13 @@ const styles = StyleSheet.create({
   targetItemDate: {
     fontSize: 12,
     color: '#999',
+  },
+  rightAlignedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  chevronButton: {
+    marginLeft: 8,
   },
   progressContainer: {
     flexDirection: 'row',
