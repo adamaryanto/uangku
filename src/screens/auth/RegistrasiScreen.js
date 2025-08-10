@@ -14,16 +14,33 @@ const RegistrasiScreen = ({ navigation }) => {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false);
 
-  const handleRegsiter = () =>{
-    if(!fullName || !email || !password || !confirmPassword){
-        alert('error', 'Mohon isi Semua Kolom')
-        return
+  const validateEmail = (email) => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+  };
+
+  const handleRegister = () => {
+    if(!fullName || !email || !password || !confirmPassword) {
+      alert('Mohon isi Semua Kolom');
+      return;
     }
-    if(password !== confirmPassword){
-        alert('error', 'password tidak cocok')
-        return
+
+    if (!validateEmail(email)) {
+      alert('Mohon masukkan alamat email yang valid (contoh: user@example.com)');
+      return;
     }
-    navigation.navigate('SuccessRegis');
+
+    if (password.length < 6) {
+      alert('Password minimal harus 6 karakter');
+      return;
+    }
+
+    if(password !== confirmPassword) {
+      alert('Password tidak cocok');
+      return;
+    }
+    
+    navigation.navigate('SuccessRegisScreen');
   }
 
   return (
@@ -39,7 +56,7 @@ const RegistrasiScreen = ({ navigation }) => {
             <View style={styles.mainContent}>
               <View style={styles.logoContainer}>
                 <Image 
-                  source={require('../../assets/logo uangku-01.png')}
+                  source={require('../../assets/uangkuPutih.png')}
                   style={styles.logo}
                 />
               </View>
@@ -108,7 +125,7 @@ const RegistrasiScreen = ({ navigation }) => {
                 <TouchableOpacity 
                     style={styles.loginButton}
                     onPress={() => {
-                      handleRegsiter()
+                      handleRegister()
                     }}
                 >
                   <Text style={styles.loginButtonText}>Daftar</Text>

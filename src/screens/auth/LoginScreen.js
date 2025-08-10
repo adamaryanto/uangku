@@ -11,10 +11,25 @@ const LoginScreen = ({ navigation }) => {
   const [password, setPassword] = useState('');
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
+  const validateEmail = (email) => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+  };
+
   const handleLogin = ()=> {
     if(!email || !password){
-      alert('error', 'Mohon isi semua')
+      alert('Mohon masukkan Email dan Password anda!')
       return
+    }
+
+    if (!validateEmail(email)) {
+      alert('Mohon masukkan alamat email yang valid (contoh: user@example.com)');
+      return;
+    }
+
+    if (password.length < 6) {
+      alert('Password minimal harus 6 karakter');
+      return;
     }
 
     console.log('login dengan email:', email,'dan password:', password)
@@ -34,7 +49,7 @@ const LoginScreen = ({ navigation }) => {
 
           <View style={styles.logoContainer}>
             <Image 
-              source={require('../../assets/logo uangku-PUTIH-02.png')}
+              source={require('../../assets/uangkuPutih.png')}
               style={styles.logo}
             />
           </View>
