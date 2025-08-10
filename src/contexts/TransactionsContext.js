@@ -3,10 +3,12 @@ import React, { createContext, useState, useContext } from 'react';
 const TransactionsContext = createContext();
 
 export const TransactionsProvider = ({ children }) => {
-  const [transactions, setTransactions] = useState([
-    { id: '1', type: 'Pemasukan', category: 'Gaji', amount: 4000000, date: '01-01-2025', icon: 'briefcase-outline' },
-    { id: '2', type: 'Pengeluaran', category: 'Makan', amount: 600000, date: '01-01-2025', icon: 'arrow-down-circle-outline' },
-  ]);
+  const [transactions, setTransactions] = useState([]);
+
+  const formatTransactionDate = (date) => {
+    const d = new Date(date);
+    return d.toISOString().split('T')[0]; // Returns YYYY-MM-DD format for consistent comparison
+  };
 
   const addTransaction = (newTransaction) => {
     const now = new Date();
@@ -28,29 +30,48 @@ export const TransactionsProvider = ({ children }) => {
   };
 
   const addTarget = (newTarget) => {
-  setTargets(prevTargets => {
-    const updatedTargets = [
-      ...prevTargets,
-      {
-        ...newTarget,
-        id: Date.now().toString(),
-        savedAmount: newTarget.savedAmount || 0,
-        date: newTarget.date || new Date().toLocaleDateString('id-ID')
-      }
-    ];
-    console.log("Updated Targets:", updatedTargets);
-    return updatedTargets;
-  });
-};
+    const now = new Date();
+    const formattedDate = formatTransactionDate(now);
+    
+    const targetTransaction = {
+      ...newTarget,
+      id: Date.now().toString(),
+      type: 'Target',
+      date: formattedDate,
+      savedAmount: newTarget.savedAmount || 0,
+      displayDate: now.toLocaleDateString('id-ID', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    };
 
-const addCicilan = (newCicilan) => {
-    setCicilan(prevCicilan => [
-      ...prevCicilan,
-      {
-        ...newCicilan,
-        id: Date.now().toString(),
-      }
-    ]);
+    setTransactions(prevTransactions => [...prevTransactions, targetTransaction]);
+    return targetTransaction;
+  };
+
+  const addCicilan = (newCicilan) => {
+    const now = new Date();
+    const formattedDate = formatTransactionDate(now);
+    
+    const cicilanTransaction = {
+      ...newCicilan,
+      id: Date.now().toString(),
+      type: 'Cicilan',
+      date: formattedDate,
+      displayDate: now.toLocaleDateString('id-ID', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    };
+
+    setTransactions(prevTransactions => [...prevTransactions, cicilanTransaction]);
+    return cicilanTransaction;
   };
 
   const getTotalBalance = () => {
@@ -76,16 +97,54 @@ const addCicilan = (newCicilan) => {
       .reduce((total, transaction) => total + transaction.amount, 0);
   };
 
+  const getCicilanTransactions = () => {
+    return transactions.filter(transaction => transaction.type === 'Cicilan');
+  };
+
+  const getTotalCicilan = () => {
+    return transactions
+      .filter(transaction => transaction.type === 'Cicilan')
+      .reduce((total, transaction) => total + transaction.amount, 0);
+  };
+
+  const getTargetTransactions = () => {
+    return transactions.filter(transaction => transaction.type === 'Target');
+  };
+
+  const getTotalTargetAmount = () => {
+    return transactions
+      .filter(transaction => transaction.type === 'Target')
+      .reduce((total, transaction) => total + (transaction.targetAmount || 0), 0);
+  };
+
+  const getTotalSavedAmount = () => {
+    return transactions
+      .filter(transaction => transaction.type === 'Target')
+      .reduce((total, transaction) => total + (transaction.savedAmount || 0), 0);
+  };
+
+  const getTotalTransferred = () => {
+    return transactions
+      .filter(transaction => transaction.type === 'Transfer')
+      .reduce((total, transaction) => total + transaction.amount, 0);
+  };
+
   return (
     <TransactionsContext.Provider
       value={{
         transactions,
-        targets,
         addTransaction,
         addTarget,
+        addCicilan,
         getTotalBalance,
         getTotalIncome,
         getTotalExpense,
+        getCicilanTransactions,
+        getTotalCicilan,
+        getTargetTransactions,
+        getTotalTargetAmount,
+        getTotalSavedAmount,
+        getTotalTransferred,
       }}
     >
       {children}
