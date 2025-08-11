@@ -130,6 +130,9 @@ const UpdateTargetProgressScreen = () => {
                       {Math.floor((target.savedAmount / target.targetAmount) * 100)}%
                     </Text>
                   </View>
+                   <Text style={styles.remainingAmount}>
+                                      Sisa: Rp{Math.max(0, target.targetAmount - (target.savedAmount || 0)).toLocaleString('id-ID')}
+                                    </Text>
                 </View>
 
                 <View style={styles.inputGroup}>
@@ -289,6 +292,12 @@ const styles = StyleSheet.create({
     color: '#666',
     minWidth: 30,
     textAlign: 'right',
+  },
+  remainingAmount: {
+    fontSize: 14,
+    color: '#E63950',
+    fontWeight: '500',
+    marginTop: 5,
   },
   inputGroup: {
     marginBottom: 20,
