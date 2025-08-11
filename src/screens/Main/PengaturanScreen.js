@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Switch, ImageBackground } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import CustomAlert from '../CustomAlert'; // <-- 1. Impor komponen baru
+import CustomAlert from '../CustomAlert'; 
+import PushNotification from 'react-native-push-notification';
 
 // Komponen SettingItem (tetap sama)
 const SettingItem = ({ icon, label, onPress, hasSwitch, switchValue, onSwitchChange }) => (
@@ -32,6 +33,25 @@ const PengaturanScreen = ({ navigation }) => {
     // Logika untuk logout diletakkan di sini
     console.log("Pengguna keluar.");
     navigation.navigate('Login');
+  };
+
+   const handleToggleReminder = (newValue) => {
+    setIsReminderEnabled(newValue);
+
+    if (newValue) {
+      // Jika toggle ON, kirim notifikasi lokal
+      PushNotification.localNotification({
+        channelId: "reminders-channel", // Pastikan sama dengan yang dibuat
+        title: "Pengingat Diaktifkan",
+        message: "Anda akan menerima notifikasi untuk pengingat penting.",
+        playSound: true,
+        soundName: "default",
+      });
+    } else {
+      // Jika toggle OFF, Anda bisa membatalkan semua notifikasi terjadwal (opsional)
+      PushNotification.cancelAllLocalNotifications();
+      console.log("Pengingat dinonaktifkan dan notifikasi dibatalkan.");
+    }
   };
 
   return (
