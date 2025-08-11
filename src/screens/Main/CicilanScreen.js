@@ -124,7 +124,7 @@ const CicilanScreen = ({ navigation }) => {
         >
           <Text style={styles.headerTitle}>Kelola Cicilan Anda</Text>
           <Text style={styles.headerSubtitle}>
-            Pantau Dan Atur Semua Cicilan Aktif Serta Jatuh Temponya
+            Atur Dan Pantau Semua Cicilan Aktif Serta Jatuh Temponya
           </Text>
         </ImageBackground>
 
