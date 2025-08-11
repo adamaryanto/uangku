@@ -296,8 +296,8 @@ const styles = StyleSheet.create({
   headerContainer: {
     backgroundColor: '#005AE0',
     paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 170,
+    paddingTop: 60,      
+    paddingBottom: 180,  
   },
   headerTitle: {
     fontSize: 26,
@@ -311,7 +311,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
-    marginTop: -130,
+    marginTop: -130,     // Tetap dipertahankan untuk memastikan posisi konten tidak berubah
     paddingHorizontal: 20,
   },
   filterContainer: {

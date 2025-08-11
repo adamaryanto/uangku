@@ -333,7 +333,7 @@ const HomeScreen = ({ navigation, isVisible, onClose }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F4F6F8', // Warna background utama
+    backgroundColor: '#F4F6F8',
   },
   headerContainer: {
     backgroundColor: '#005AE0',
