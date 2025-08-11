@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, SafeAreaView, ImageBackground, TouchableOpacity
 import { StatusBar } from 'expo-status-bar';
 
 const WelcomeScreen = ({ navigation,route }) => {
-  // Di aplikasi nyata, nama 'Alvin' akan diambil dari data pengguna yang login
   // Di dalam GreetingScreen.js
     
   const email = route.params?.email || ''; 
@@ -12,13 +11,12 @@ const WelcomeScreen = ({ navigation,route }) => {
 
   return (
     <ImageBackground
-      source={require('../assets/image.png')} // Menggunakan background yang konsisten
+      source={require('../assets/image.png')} 
       style={styles.container}
     >
       <SafeAreaView style={styles.contentContainer}>
         <StatusBar style="light" />
         
-        {/* Konten utama sengaja dibungkus View agar bisa diatur posisinya */}
         <View style={styles.mainContent}>
             <Text style={styles.title}>Hallo {displayName}</Text>
             <Text style={styles.subtitle}>
@@ -29,7 +27,7 @@ const WelcomeScreen = ({ navigation,route }) => {
         {/* Tombol Lanjut diposisikan di bawah */}
         <TouchableOpacity
           style={styles.button}
-          onPress={() => navigation.replace('MainTabs')} // Ganti ke Home, agar tidak bisa kembali ke sini
+          onPress={() => navigation.replace('MainTabs')} 
         >
           <Text style={styles.buttonText}>Lanjut  →</Text>
         </TouchableOpacity>
@@ -44,13 +42,13 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
-    justifyContent: 'space-between', // Mendorong konten ke atas & tombol ke bawah
+    justifyContent: 'space-between', 
     alignItems: 'center',
     padding: 20,
   },
   mainContent: {
     flex: 1,
-    justifyContent: 'center', // Menengahkan teks secara vertikal di sisa ruang
+    justifyContent: 'center', 
     alignItems: 'center',
     paddingHorizontal: 20,
   },
@@ -73,7 +71,7 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     paddingVertical: 12,
     paddingHorizontal: 40,
-    marginBottom: 40, // Jarak dari bawah layar
+    marginBottom: 40, 
   },
   buttonText: {
     color: 'white',
