@@ -58,9 +58,9 @@ const PengaturanScreen = ({ navigation }) => {
                 style={styles.headerContainer}
                 imageStyle={{ borderBottomLeftRadius: 25, borderBottomRightRadius: 25 }}
               >
-                <Text style={styles.headerTitle}>Tujuan Keuangan Anda</Text>
+                <Text style={styles.headerTitle}>Pusat Akun Anda</Text>
                 <Text style={styles.headerSubtitle}>
-                  Atur dan pantau perkembangan target keuangan Anda.
+                Akses lengkap pengaturan akun dan preferensi Anda.
                 </Text>
               </ImageBackground>
 

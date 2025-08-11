@@ -109,7 +109,7 @@ const PemasukanSaldoScreen = ({ navigation }) => {
       style={styles.container}
     >
       <SafeAreaView style={styles.safeArea}>
-        <StatusBar style="light" />
+        <StatusBar style="light"/>
         <ScrollView showsVerticalScrollIndicator={false}>
           <View style={styles.headerContainer}>
             <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
