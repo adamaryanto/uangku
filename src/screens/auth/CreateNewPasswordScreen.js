@@ -162,6 +162,7 @@ const styles = StyleSheet.create({
   },
   inputPassword: {
     flex: 1,
+    color:'#000000',
     paddingVertical: 14,
     fontSize: 16,
   },

@@ -169,82 +169,94 @@ const CicilanScreen = ({ navigation }) => {
               </Text>
             </View>
             <View style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>Sisa dana Cicilan :</Text>
+              <Text style={styles.summaryLabel}>Sisa cicilan :</Text>
               <Text style={[styles.summaryAmount, { color: '#E63950' }]}>
                 -{formatCurrency(totalRemaining)}
               </Text>
             </View>
           </View>
 
-          {/* List Cicilan */}
-          <View style={styles.allTargetsCard}>
-            <Text style={styles.targetListTitle}>Cicilan anda :</Text>
-            {cicilanToShow.map((item) => {
-              const total = parseFloat(item.totalCicilan || 0);
-              const paid = parseFloat(item.paidAmount || 0);
-              const remaining = Math.max(0, total - paid);
-              const progress = total > 0 ? (paid / total) * 100 : 0;
-              const isPaidOff = paid >= total;
+       {/* List Cicilan */}
+       <View style={styles.allTargetsCard}>
+          {/* Cek apakah ada data cicilan setelah difilter */}
+          {sortedCicilan.length > 0 ? (
+            // Jika ADA, tampilkan judul dan daftarnya
+            <>
+              <Text style={styles.targetListTitle}>Cicilan anda :</Text>
               
-              return (
-                <View key={item.id} style={styles.targetItemRow}>
-                  <View style={styles.targetItemHeader}>
-                    <View style={styles.targetIconContainer}>
-                      <MaterialCommunityIcons name="credit-card-multiple-outline" size={24} color="#005AE0" />
-                    </View>
-                    <View style={styles.targetItemDetails}>
-                      <Text style={styles.targetItemName}>{item.name || 'Tanpa Nama'}</Text>
-                      <Text style={styles.targetItemSaved}>Dibayar: {formatCurrency(paid)}</Text>
-                      <Text style={styles.targetItemRemaining}>Sisa: {formatCurrency(remaining)}</Text>
+              {cicilanToShow.map((item) => {
+                const total = parseFloat(item.totalCicilan || 0);
+                const paid = parseFloat(item.paidAmount || 0);
+                const remaining = Math.max(0, total - paid);
+                const progress = total > 0 ? (paid / total) * 100 : 0;
+                const isPaidOff = paid >= total;
+                
+                return (
+                  <View key={item.id} style={styles.targetItemRow}>
+                    {/* ... (kode render item Anda tidak berubah) ... */}
+                    <View style={styles.targetItemHeader}>
+                      <View style={styles.targetIconContainer}>
+                        <MaterialCommunityIcons name="credit-card-multiple-outline" size={24} color="#005AE0" />
+                      </View>
+                      <View style={styles.targetItemDetails}>
+                        <Text style={styles.targetItemName}>{item.name || 'Tanpa Nama'}</Text>
+                        <Text style={styles.targetItemSaved}>Dibayar: {formatCurrency(paid)}</Text>
+                        <Text style={styles.targetItemRemaining}>Sisa: {formatCurrency(remaining)}</Text>
+                      </View>
+                      <View style={styles.targetItemAmountContainer}>
+                        <Text style={styles.targetItemTarget}>Total: {formatCurrency(total)}</Text>
+                        <Text style={styles.targetItemDate}>Jatuh Tempo: {item.dueDate}</Text>
+                      </View>
                     </View>
                     <View style={styles.targetItemAmountContainer}>
-                      <Text style={styles.targetItemTarget}>Total: {formatCurrency(total)}</Text>
-                      <Text style={styles.targetItemDate}>Jatuh Tempo: {item.dueDate}</Text>
+                      <View style={styles.rightAlignedRow}>
+                        <Text style={[styles.targetItemDate, { color: isPaidOff ? '#27AE60' : '#E74C3C' }]}>
+                          {isPaidOff ? 'Lunas' : 'Belum Lunas'}
+                        </Text>
+                        <TouchableOpacity 
+                          onPress={() => navigation.navigate('UpdateCicilanProgress', { cicilan: item })}
+                          style={styles.chevronButton}
+                        >
+                          <MaterialCommunityIcons name="chevron-right" size={24} color="#666" />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                    <View style={styles.progressContainer}>
+                      <Text style={styles.progressText}>{Math.min(100, Math.floor(progress))}%</Text>
+                      <ProgressBar progress={progress} />
+                      <Text style={styles.progressText}>100%</Text>
                     </View>
                   </View>
+                );
+              })}
 
-                  <View style={styles.targetItemAmountContainer}>
-                    <View style={styles.rightAlignedRow}>
-                      <Text style={[styles.targetItemDate, { color: isPaidOff ? '#27AE60' : '#E74C3C' }]}>
-                        {isPaidOff ? 'Lunas' : 'Belum Lunas'}
-                      </Text>
-                      <TouchableOpacity 
-                        onPress={() => navigation.navigate('UpdateCicilanProgress', { cicilan: item })}
-                        style={styles.chevronButton}
-                      >
-                        <MaterialCommunityIcons name="chevron-right" size={24} color="#666" />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-
-                  <View style={styles.progressContainer}>
-                    <Text style={styles.progressText}>{Math.min(100, Math.floor(progress))}%</Text>
-                    <ProgressBar progress={progress} />
-                    <Text style={styles.progressText}>100%</Text>
-                  </View>
-                </View>
-              );
-            })}
-
-            {/* Tombol Lihat Lainnya */}
-            {sortedCicilan.length > 3 && !showAll && (
-              <TouchableOpacity
-                style={styles.seeMoreButton}
-                onPress={() => setShowAll(true)}
-              >
-                <Text style={styles.seeMoreText}>Lihat Lainnya</Text>
-              </TouchableOpacity>
-            )}
-
-            {showAll && sortedCicilan.length > 3 && (
-              <TouchableOpacity
-                style={styles.seeMoreButton}
-                onPress={() => setShowAll(false)}
-              >
-                <Text style={styles.seeMoreText}>Tampilkan Lebih Sedikit</Text>
-              </TouchableOpacity>
-            )}
-          </View>
+              {/* Tombol Lihat Lainnya */}
+              {sortedCicilan.length > 3 && !showAll && (
+                <TouchableOpacity
+                  style={styles.seeMoreButton}
+                  onPress={() => setShowAll(true)}
+                >
+                  <Text style={styles.seeMoreText}>Lihat Lainnya</Text>
+                </TouchableOpacity>
+              )}
+              {showAll && sortedCicilan.length > 3 && (
+                <TouchableOpacity
+                  style={styles.seeMoreButton}
+                  onPress={() => setShowAll(false)}
+                >
+                  <Text style={styles.seeMoreText}>Tampilkan Lebih Sedikit</Text>
+                </TouchableOpacity>
+              )}
+            </>
+          ) : (
+            // Jika TIDAK ADA, tampilkan pesan kosong
+            <View style={styles.noCicilan}>
+              <MaterialCommunityIcons name="credit-card-off-outline" size={48} color="#A9A9A9" />
+              <Text style={styles.noCicilanText}>Belum Ada Cicilan</Text>
+              <Text style={styles.noCicilanSubtext}>Tambahkan cicilan pertama Anda melalui tombol +</Text>
+            </View>
+          )}
+        </View>
         </View>
       </ScrollView>
 
@@ -489,6 +501,25 @@ const styles = StyleSheet.create({
     elevation: 3, // untuk Android
   },
   
+  noCicilan: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+  noCicilanText: {
+    fontSize: 18,
+    color: '#333',
+    fontWeight: 'bold',
+    marginTop: 15,
+    marginBottom: 10,
+  },
+  noCicilanSubtext: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+  },
+
   targetListTitle: {
     fontSize: 18,
     fontWeight: 'bold',

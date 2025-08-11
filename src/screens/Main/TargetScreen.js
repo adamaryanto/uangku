@@ -174,69 +174,82 @@ const TargetScreen = ({navigation}) => {
           </View>
 
           {/* List Target */}
-          <View style={styles.allTargetsCard}>
-            <Text style={styles.targetListTitle}>Target anda :</Text>
-            {targetsToShow.map((item) => {
-              const progress = Math.min(100, (item.savedAmount / item.targetAmount) * 100);
-              const remainingAmount = Math.max(0, item.targetAmount - item.savedAmount);
-              return (
-                <View key={item.id} style={styles.targetItemRow}>
-                  <View style={styles.targetItemHeader}>
-                    <View style={styles.targetIconContainer}>
-                      <MaterialCommunityIcons name="briefcase-outline" size={24} color="#005AE0" />
-                    </View>
-                    <View style={styles.targetItemDetails}>
-                      <Text style={styles.targetItemName}>{item.name}</Text>
-                      <Text style={styles.targetItemSaved}>Terkumpul: {formatCurrency(item.savedAmount)}</Text>
-                      <Text style={styles.targetItemRemaining}>Sisa: {formatCurrency(remainingAmount)}</Text>
+        <View style={styles.allTargetsCard}>
+
+          {/* Cek apakah ada data target */}
+          {targets.length > 0 ? (
+            <>
+            <Text style={styles.targetListTitle}>Target Anda :</Text>
+              {targetsToShow.map((item) => {
+                const progress = Math.min(100, (item.savedAmount / item.targetAmount) * 100);
+                const remainingAmount = Math.max(0, item.targetAmount - item.savedAmount);
+                return (
+                  <View key={item.id} style={styles.targetItemRow}>
+                    {/* ... (kode untuk render setiap item target tetap sama) ... */}
+                    <View style={styles.targetItemHeader}>
+                      <View style={styles.targetIconContainer}>
+                        <MaterialCommunityIcons name="briefcase-outline" size={24} color="#005AE0" />
+                      </View>
+                      <View style={styles.targetItemDetails}>
+                        <Text style={styles.targetItemName}>{item.name}</Text>
+                        <Text style={styles.targetItemSaved}>Terkumpul: {formatCurrency(item.savedAmount)}</Text>
+                        <Text style={styles.targetItemRemaining}>Sisa: {formatCurrency(remainingAmount)}</Text>
+                      </View>
+                      <View style={styles.targetItemAmountContainer}>
+                        <Text style={styles.targetItemTarget}>Target: {formatCurrency(item.targetAmount)}</Text>
+                        <Text style={styles.targetItemDate}>
+                          {item.targetDate ? `Target: ${new Date(item.targetDate).toLocaleDateString('id-ID')}` : ''}
+                        </Text>
+                      </View>
                     </View>
                     <View style={styles.targetItemAmountContainer}>
-                      <Text style={styles.targetItemTarget}>Target: {formatCurrency(item.targetAmount)}</Text>
-                      <Text style={styles.targetItemDate}>
-                        {item.targetDate ? `Target: ${new Date(item.targetDate).toLocaleDateString('id-ID')}` : ''}
-                      </Text>
+                      <View style={styles.rightAlignedRow}>
+                        <Text style={styles.targetItemDate}>Selesai: {item.date}</Text>
+                        <TouchableOpacity 
+                          onPress={() => navigation.navigate('UpdateTargetProgress', { target: item })}
+                          style={styles.chevronButton}
+                        >
+                          <MaterialCommunityIcons name="chevron-right" size={24} color="#666" />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                    <View style={styles.progressContainer}>
+                      <Text style={styles.progressText}>{Math.floor(progress)}%</Text>
+                      <ProgressBar progress={progress} />
+                      <Text style={styles.progressText}>100%</Text>
                     </View>
                   </View>
+                );
+              })}
 
-                  <View style={styles.targetItemAmountContainer}>
-                    <View style={styles.rightAlignedRow}>
-                      <Text style={styles.targetItemDate}>Selesai: {item.date}</Text>
-                      <TouchableOpacity 
-                        onPress={() => navigation.navigate('UpdateTargetProgress', { target: item })}
-                        style={styles.chevronButton}
-                      >
-                        <MaterialCommunityIcons name="chevron-right" size={24} color="#666" />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                  <View style={styles.progressContainer}>
-                    <Text style={styles.progressText}>{Math.floor(progress)}%</Text>
-                    <ProgressBar progress={progress} />
-                    <Text style={styles.progressText}>100%</Text>
-                  </View>
-                </View>
-              );
-            })}
+              {/* Tombol Lihat Lainnya */}
+              {targets.length > 3 && !showAllTargets && (
+                <TouchableOpacity
+                  style={styles.seeMoreButton}
+                  onPress={() => setShowAllTargets(true)}
+                >
+                  <Text style={styles.seeMoreText}>Lihat Lainnya</Text>
+                </TouchableOpacity>
+              )}
 
-            {/* Tombol Lihat Lainnya */}
-            {targets.length > 3 && !showAllTargets && (
-              <TouchableOpacity
-                style={styles.seeMoreButton}
-                onPress={() => setShowAllTargets(true)}
-              >
-                <Text style={styles.seeMoreText}>Lihat Lainnya</Text>
-              </TouchableOpacity>
-            )}
-
-            {showAllTargets && (
-              <TouchableOpacity
-                style={styles.seeMoreButton}
-                onPress={() => setShowAllTargets(false)}
-              >
-                <Text style={styles.seeMoreText}>Tampilkan Lebih Sedikit</Text>
-              </TouchableOpacity>
-            )}
-          </View>
+              {showAllTargets && (
+                <TouchableOpacity
+                  style={styles.seeMoreButton}
+                  onPress={() => setShowAllTargets(false)}
+                >
+                  <Text style={styles.seeMoreText}>Tampilkan Lebih Sedikit</Text>
+                </TouchableOpacity>
+              )}
+            </>
+          ) : (
+            // Jika TIDAK ADA target, tampilkan pesan ini
+            <View style={styles.noTargets}>
+              <MaterialCommunityIcons name="bullseye-arrow" size={48} color="#A9A9A9" />
+              <Text style={styles.noTargetsText}>Belum Ada Target</Text>
+              <Text style={styles.noTargetsSubtext}>Buat target keuangan pertama Anda melalui tombol +</Text>
+            </View>
+          )}
+        </View>
         </View>
       </ScrollView>
       
@@ -311,9 +324,10 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
-    marginTop: -130,     // Tetap dipertahankan untuk memastikan posisi konten tidak berubah
+    marginTop: -130,    
     paddingHorizontal: 20,
   },
+
   filterContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -322,17 +336,17 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
     filterButton: {
-    flexDirection: 'row', // <-- 1. Buat konten jadi horizontal
-    justifyContent: 'center', // <-- 2. Pusatkan konten di dalam tombol
+    flexDirection: 'row', 
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 8, // <-- 3. Kurangi padding vertikal agar lebih pendek
-    paddingHorizontal: 10, // Kurangi juga padding horizontal
+    paddingVertical: 8, 
+    paddingHorizontal: 10, 
     borderRadius: 5,
     width: '32%',
   },
   filterButtonText: {
     color: 'white',
-    fontSize: 13, // <-- 4. Kecilkan sedikit font
+    fontSize: 13, 
     fontWeight: 'bold',
     marginBottom:5,
     
@@ -487,9 +501,27 @@ const styles = StyleSheet.create({
     marginBottom:20,
     marginTop: 16,
     
-    elevation: 3, // untuk Android
+    elevation: 3, 
   },
   
+  noTargets: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,  
+    paddingHorizontal: 20,
+  },
+  noTargetsText: {
+    fontSize: 18,
+    color: '#333',
+    fontWeight: 'bold',
+    marginTop: 15,  
+    marginBottom: 10,
+  },
+  noTargetsSubtext: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+  },
   targetListTitle: {
     fontSize: 18,
     fontWeight: 'bold',

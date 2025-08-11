@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Switch, Alert,ImageBackground } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Switch, ImageBackground } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import CustomAlert from '../CustomAlert'; // <-- 1. Impor komponen baru
 
-// Komponen reusable untuk setiap baris pengaturan
+// Komponen SettingItem (tetap sama)
 const SettingItem = ({ icon, label, onPress, hasSwitch, switchValue, onSwitchChange }) => (
   <TouchableOpacity style={styles.settingItem} onPress={onPress} disabled={hasSwitch}>
     <View style={styles.settingItemContent}>
-      <MaterialCommunityIcons name={icon} size={24} color="#333" style={styles.icon} />
+      <View style={styles.iconContainer}>
+        <MaterialCommunityIcons name={icon} size={24} color="#333" />
+      </View>
       <Text style={styles.settingLabel}>{label}</Text>
     </View>
     {hasSwitch && (
@@ -23,55 +26,39 @@ const SettingItem = ({ icon, label, onPress, hasSwitch, switchValue, onSwitchCha
 
 const PengaturanScreen = ({ navigation }) => {
   const [isReminderEnabled, setIsReminderEnabled] = useState(false);
+  const [isLogoutAlertVisible, setIsLogoutAlertVisible] = useState(false); // <-- 2. Tambah state untuk modal
 
   const handleLogout = () => {
-    // Tampilkan konfirmasi sebelum keluar
-    Alert.alert(
-      "Keluar",
-      "Apakah Anda yakin ingin keluar dari akun Anda?",
-      [
-        {
-          text: "Batal",
-          style: "cancel"
-        },
-        { 
-          text: "Keluar", 
-          onPress: () => {
-            // Di aplikasi nyata, di sini Anda akan membersihkan data sesi
-            // dan mengarahkan pengguna kembali ke alur login.
-            console.log("Pengguna keluar.");
-            navigation.navigate('Login'); // Arahkan ke Login
-          },
-          style: 'destructive'
-        }
-      ]
-    );
+    // Logika untuk logout diletakkan di sini
+    console.log("Pengguna keluar.");
+    navigation.navigate('Login');
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
       <ScrollView>
-      {/* Header */}
-              <ImageBackground
-                source={require('../../assets/image.png')}
-                style={styles.headerContainer}
-                imageStyle={{ borderBottomLeftRadius: 25, borderBottomRightRadius: 25 }}
-              >
-                <Text style={styles.headerTitle}>Pusat Akun Anda</Text>
-                <Text style={styles.headerSubtitle}>
-                Akses lengkap pengaturan akun dan preferensi Anda.
-                </Text>
-              </ImageBackground>
+        {/* Header */}
+        <ImageBackground
+          source={require('../../assets/image.png')}
+          style={styles.headerContainer}
+          imageStyle={{ borderBottomLeftRadius: 25, borderBottomRightRadius: 25 }}
+        >
+          <Text style={styles.headerTitle}>Pusat Akun Anda</Text>
+          <Text style={styles.headerSubtitle}>
+            Akses lengkap pengaturan akun dan preferensi Anda.
+          </Text>
+        </ImageBackground>
 
-      <View style={styles.contentContainer}>
+        <View style={styles.contentContainer}>
+          {/* ... (SettingItem lain tetap sama) ... */}
           <SettingItem
-            icon="web"
+            icon="translate"
             label="Pengaturan Bahasa"
             onPress={() => Alert.alert('Info', 'Fitur pengaturan bahasa akan segera hadir.')}
           />
           <SettingItem
-            icon="bell-outline"
+            icon="bell-ring-outline"
             label="Aktifkan Pengingat"
             hasSwitch={true}
             switchValue={isReminderEnabled}
@@ -88,16 +75,26 @@ const PengaturanScreen = ({ navigation }) => {
             onPress={() => Alert.alert('Info', 'Fitur ubah sandi akan segera hadir.')}
           />
 
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          {/* Tombol Logout sekarang hanya memunculkan modal */}
+          <TouchableOpacity style={styles.logoutButton} onPress={() => setIsLogoutAlertVisible(true)}>
             <MaterialCommunityIcons name="logout" size={24} color="white" style={styles.icon} />
             <Text style={styles.logoutButtonText}>Keluar</Text>
           </TouchableOpacity>
-      </View>
+        </View>
       </ScrollView>
+      
+      {/* 3. Panggil CustomAlert di sini */}
+      <CustomAlert 
+        visible={isLogoutAlertVisible}
+        onClose={() => setIsLogoutAlertVisible(false)}
+        title="Apakah Anda yakin ingin keluar?"
+        onConfirm={handleLogout}
+      />
     </SafeAreaView>
   );
 };
 
+// Styles (tetap sama)
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -107,41 +104,40 @@ const styles = StyleSheet.create({
     backgroundColor: '#005AE0',
     paddingHorizontal: 20,
     paddingTop: 60,
-    paddingBottom: 90,
+    paddingBottom: 180,
   },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: 'bold',
     color: 'white',
-    marginTop:15,
   },
   headerSubtitle: {
-    fontSize: 16,
+    fontSize: 15,
     color: 'rgba(255, 255, 255, 0.8)',
     marginTop: 5,
   },
-  // --- STYLE YANG DIRAPIKAN ---
   contentContainer: {
     flex: 1,
-    marginTop: 20,
+    marginTop: -130,
     paddingHorizontal: 20,
-    
-    // Properti yang tidak perlu dihapus
   },
   settingItem: {
     backgroundColor: 'white',
-    borderRadius: 5,
-    paddingVertical: 15,
-    paddingHorizontal: 20,
-    marginBottom: 15,
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 10,
+    minHeight: 60,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    elevation: 1,
+  },
+  iconContainer: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 15,
   },
   settingItemContent: {
     flexDirection: 'row',
@@ -155,11 +151,10 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   logoutButton: {
-    backgroundColor: '#FF4560', // Merah
+    backgroundColor: '#FF4560',
     borderRadius: 5,
     paddingVertical: 15,
     paddingHorizontal: 20,
-     // Beri jarak dari item terakhir
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'start',
@@ -171,5 +166,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
+
 
 export default PengaturanScreen;

@@ -28,16 +28,6 @@ const categoryColors = {
   'Transfer Masuk': '#2ECC71'
 };
 
-const chartStyles = StyleSheet.create({
-  chartContainer: {
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 0,
-  },
-});
-
 // Format mata uang
 const formatCurrency = (number) => {
   return new Intl.NumberFormat('id-ID', {
@@ -217,30 +207,32 @@ const DiagramScreen = ({ navigation }) => {
 
           {/* Card untuk Chart */}
           <View style={[styles.card, styles.chartCard]}>
-  <Text style={styles.sectionTitle}>Ringkasan Pengeluaran</Text>
-  {chartData.length > 0 ? (
-    <View style={chartStyles.chartContainer}>
-      <PieChart
-        data={chartData}
-        width={200} // ukuran lingkaran
-        height={200}
-        chartConfig={chartConfig}
-        accessor="population"
-        backgroundColor="transparent"
-        absolute
-        hasLegend={false}
-      />
-      <Legend />
-    </View>
-  ) : (
-    <View style={styles.emptyState}>
-      <MaterialCommunityIcons name="chart-pie" size={50} color="#DDD" />
-      <Text style={styles.emptyStateText}>
-        Tidak ada data pengeluaran untuk periode ini
-      </Text>
-    </View>
-  )}
-</View>
+            <Text style={styles.sectionTitle}>Ringkasan Pengeluaran</Text>
+            {chartData.length > 0 ? (
+              <>
+                <View style={{ width: '100%', alignItems: 'center'}}>
+                  <PieChart
+                    data={chartData}
+                    width={280}
+                    height={220}
+                    chartConfig={chartConfig}
+                    accessor="population"
+                    backgroundColor="transparent"
+                    hasLegend={false}
+                    center={[70, -10]}
+                  />
+                </View>
+                <Legend />
+              </>
+            ) : (
+              <View style={styles.emptyState}>
+                <MaterialCommunityIcons name="chart-pie" size={50} color="#DDD" />
+                <Text style={styles.emptyStateText}>
+                  Tidak ada data pengeluaran untuk periode ini
+                </Text>
+              </View>
+            )}
+          </View>
 
           {/* Card untuk Total Dana Keseluruhan */}
           <View style={styles.card}>
@@ -277,8 +269,8 @@ const styles = StyleSheet.create({
   headerContainer: {
     backgroundColor: '#005AE0',
     paddingHorizontal: 20,
-    paddingTop: 80,
-    paddingBottom: 170,
+    paddingTop: 60,
+    paddingBottom: 180,
   },
   headerTitle: {
     fontSize: 26,
@@ -286,13 +278,13 @@ const styles = StyleSheet.create({
     color: 'white',
   },
   headerSubtitle: {
-    fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 15,
+    color: 'rgba(255, 255, 255, 0.9)',
     marginTop: 5,
   },
   contentContainer: {
     flex: 1,
-    marginTop: -160,
+    marginTop: -130,
     paddingHorizontal: 20,
   },
   card: {

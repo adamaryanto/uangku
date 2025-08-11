@@ -193,7 +193,7 @@ const HomeScreen = ({ navigation, isVisible, onClose }) => {
           <View style={styles.summaryCardContainer}>
             <View style={styles.summaryCard}>
               <Text style={styles.summaryLabel}>
-                Pemasukan : <MaterialCommunityIcons name="arrow-top-right-thin-circle-outline" size={24} color="#27AE60" />
+                Pemasukan <MaterialCommunityIcons name="arrow-top-right-thin-circle-outline" size={24} color="#27AE60" />
               </Text>
               <View>
                 <Text style={[styles.summaryAmount, { color: '#27AE60' }]}>
@@ -203,7 +203,7 @@ const HomeScreen = ({ navigation, isVisible, onClose }) => {
             </View>
             <View style={styles.summaryCard}>
               <Text style={styles.summaryLabel}>
-                Pengeluaran : <MaterialCommunityIcons name="arrow-bottom-left-thin-circle-outline" size={24} color="#E74C3C" />
+                Pengeluaran <MaterialCommunityIcons name="arrow-bottom-left-thin-circle-outline" size={24} color="#E74C3C" />
               </Text>
               <View>
                 <Text style={[styles.summaryAmount, { color: '#E74C3C' }]}>
@@ -224,7 +224,9 @@ const HomeScreen = ({ navigation, isVisible, onClose }) => {
               </Text>
             </View>
             <View style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>Jumlah Transaksi</Text>
+              <Text style={styles.summaryLabel}>
+                Jumlah Transaksi <MaterialCommunityIcons name="format-list-bulleted" size={24} color="#F39C12" />
+              </Text>
               <Text style={[styles.summaryAmount, { color: '#F39C12', fontSize: 24, fontWeight: 'bold' }]}>{filteredTransactions.length}X</Text>
             </View>
           </View>
@@ -426,11 +428,11 @@ const styles = StyleSheet.create({
     color: 'black',
     fontWeight: 'bold',
     marginBottom: 5,
+    alignItems: 'center',
   },
   summaryAmount: {
     fontSize: 15,
     fontWeight: 'bold',
-    
   },
  
   transactionListCard: {
@@ -438,7 +440,7 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     padding: 15,
     marginTop: 20,
-    marginBottom: 100, // Beri ruang di bawah
+    marginBottom: 100,
   },
   transactionListTitle: {
     fontSize: 18,
