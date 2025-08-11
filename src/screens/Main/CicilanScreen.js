@@ -253,7 +253,7 @@ const CicilanScreen = ({ navigation }) => {
             <View style={styles.noCicilan}>
               <MaterialCommunityIcons name="credit-card-off-outline" size={48} color="#A9A9A9" />
               <Text style={styles.noCicilanText}>Belum Ada Cicilan</Text>
-              <Text style={styles.noCicilanSubtext}>Tambahkan cicilan pertama Anda melalui tombol +</Text>
+              <Text style={styles.noCicilanSubtext}>Tambahkan cicilan pertama Anda</Text>
             </View>
           )}
         </View>

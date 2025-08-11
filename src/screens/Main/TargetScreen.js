@@ -246,7 +246,7 @@ const TargetScreen = ({navigation}) => {
             <View style={styles.noTargets}>
               <MaterialCommunityIcons name="bullseye-arrow" size={48} color="#A9A9A9" />
               <Text style={styles.noTargetsText}>Belum Ada Target</Text>
-              <Text style={styles.noTargetsSubtext}>Buat target keuangan pertama Anda melalui tombol +</Text>
+              <Text style={styles.noTargetsSubtext}>Buat target keuangan pertama Anda</Text>
             </View>
           )}
         </View>

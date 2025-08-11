@@ -36,17 +36,20 @@ const HomeScreen = ({ navigation, isVisible, onClose }) => {
 
   // Get the title for the transaction list based on selected date
   const getTransactionListTitle = () => {
+    if (filteredTransactions.length === 0) {
+      return null; 
+    }
     const today = new Date();
     const isToday = selectedDate.toDateString() === today.toDateString();
     
     if (isToday) {
       return {
-        text: 'Transaksi anda hari ini',
+        text: 'Transaksi Anda hari ini :',
         isMultiLine: false
       };
     } else {
       return {
-        text: `Transaksi anda pada tanggal\n${formatDisplayDate(selectedDate)}`,
+        text: `Transaksi Anda pada tanggal\n${formatDisplayDate(selectedDate)}`,
         isMultiLine: true
       };
     }
@@ -235,6 +238,7 @@ const HomeScreen = ({ navigation, isVisible, onClose }) => {
           <View style={styles.transactionListCard}>
             {(() => {
               const title = getTransactionListTitle();
+              if (!title) return null; // Don't render anything if no title
               return (
                 <Text style={[
                   styles.transactionListTitle,
