@@ -5,6 +5,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useTransactions } from '../../contexts/TransactionsContext';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 // Komponen Input Kustom
 const LabeledInput = ({ label, placeholder, value, onChangeText, keyboardType = 'default' }) => (
@@ -31,13 +32,22 @@ const TambahCicilanScreen = ({ navigation }) => {
   const [endDate, setEndDate] = useState('');
   
   const { addCicilan } = useTransactions();
+  const { language, t } = useLanguage();
 
   const formatDate = (date) => {
-    return date.toLocaleDateString('id-ID', {
+    return date.toLocaleDateString(language === 'id' ? 'id-ID' : 'en-US', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric'
     }).replace(/\//g, '-');
+  };
+
+  const parseDate = (dateStr) => {
+    // Expecting format DD-MM-YYYY
+    if (!dateStr) return null;
+    const [dd, mm, yyyy] = dateStr.split('-').map((v) => parseInt(v, 10));
+    if (!dd || !mm || !yyyy) return null;
+    return new Date(yyyy, mm - 1, dd);
   };
 
   const handleStartDateChange = (event, date) => {
@@ -50,13 +60,20 @@ const TambahCicilanScreen = ({ navigation }) => {
   const handleEndDateChange = (event, date) => {
     setShowEndDatePicker(Platform.OS === 'ios');
     if (date) {
+      if (startDate) {
+        const start = parseDate(startDate);
+        if (start && date < start) {
+          Alert.alert(t('error'), t('endDateMustBeAfterStartDate'));
+          return;
+        }
+      }
       setEndDate(formatDate(date));
     }
   };
 
   const handleSave = () => {
     if (!name || !targetAmount) {
-      Alert.alert('Error', 'Nama cicilan dan jumlah cicilan wajib diisi.');
+      Alert.alert(t('error'), t('installmentNameAndAmountRequired'));
       return;
     }
 
@@ -64,7 +81,7 @@ const TambahCicilanScreen = ({ navigation }) => {
     const amount = parseInt(targetAmount.replace(/\D/g, ''), 10);
     
     if (isNaN(amount) || amount <= 0) {
-      Alert.alert('Error', 'Jumlah cicilan harus berupa angka yang valid dan lebih dari 0');
+      Alert.alert(t('error'), t('installmentAmountMustBeValid'));
       return;
     }
 
@@ -73,7 +90,7 @@ const TambahCicilanScreen = ({ navigation }) => {
       name: name.trim(),
       totalCicilan: amount,
       paidAmount: 0,
-      date: new Date().toLocaleDateString('id-ID').replace(/\//g, '-'),
+      date: formatDate(new Date()),
       startDate: startDate,
       dueDate: endDate,
       notes: notes.trim(),
@@ -82,8 +99,8 @@ const TambahCicilanScreen = ({ navigation }) => {
 
     addCicilan(newCicilan);
     
-    Alert.alert('Sukses', 'Cicilan berhasil ditambahkan.', [
-      { text: 'OK', onPress: () => navigation.goBack() }
+    Alert.alert(t('success'), t('installmentAddedSuccess'), [
+      { text: t('ok'), onPress: () => navigation.goBack() }
     ]);
   };
 
@@ -116,32 +133,32 @@ const TambahCicilanScreen = ({ navigation }) => {
           <View style={styles.headerContainer}>
             <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
               <MaterialCommunityIcons name="chevron-left" size={32} color="white" />
-              <Text style={styles.backButtonText}>Kembali</Text>
+              <Text style={styles.backButtonText}>{t('back')}</Text>
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Cicilan</Text>
-            <Text style={styles.headerSubtitle}>Catat Semua cicilan yang kamu punya, seperti cicilan rumah, motor, atau lainnya</Text>
+            <Text style={styles.headerTitle}>{t('installmentsLabel')}</Text>
+            <Text style={styles.headerSubtitle}>{t('manageInstallmentsSubtitle')}</Text>
           </View>
 
           <View style={styles.contentContainer}>
             <View style={styles.formCard}>
               <View style={styles.card}>
                 <View style={styles.cardHeader}>
-                  <Text style={styles.cardTitle}>Periode Cicilan :</Text>
+                  <Text style={styles.cardTitle}>{t('transactionPeriod')}</Text>
                 </View>
                 <View style={styles.dateContainer}>
                   <TouchableOpacity
                     style={styles.datePicker}
                     onPress={() => setShowStartDatePicker(true)}
                   >
-                    <Text style={styles.dateLabel}>Dari tanggal :</Text>
-                    <Text style={styles.dateValue}>{startDate || 'DD-MM-YYYY'}</Text>
+                    <Text style={styles.dateLabel}>{t('fromDate')}</Text>
+                    <Text style={styles.dateValue}>{startDate || t('datePlaceholder')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.datePickerEnd}
                     onPress={() => setShowEndDatePicker(true)}
                   >
-                    <Text style={[styles.dateLabel, { textAlign: 'right' }]}>Sampai tanggal :</Text>
-                    <Text style={[styles.dateValue, { textAlign: 'right' }]}>{endDate || 'DD-MM-YYYY'}</Text>
+                    <Text style={[styles.dateLabel, { textAlign: 'right' }]}>{t('toDate')}</Text>
+                    <Text style={[styles.dateValue, { textAlign: 'right' }]}>{endDate || t('datePlaceholder')}</Text>
                   </TouchableOpacity>
                 </View>
                 {showStartDatePicker && (
@@ -158,28 +175,29 @@ const TambahCicilanScreen = ({ navigation }) => {
                     mode="date"
                     display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                     onChange={handleEndDateChange}
+                    minimumDate={parseDate(startDate) || undefined}
                   />
                 )}
               </View>
 
               <LabeledInput 
-                label="Nama Cicilan"
-                placeholder="Contoh: Cicilan Motor"
+                label={t('installmentName')}
+                placeholder={t('installmentName')}
                 value={name}
                 onChangeText={setName}
               />
               <LabeledInput 
-                label="Jumlah Cicilan"
-                placeholder="Contoh: 2.000.000"
+                label={t('totalAmount')}
+                placeholder="0"
                 value={formatCurrencyInput(targetAmount)}
                 onChangeText={handleAmountChange}
                 keyboardType="numeric"
               />
               <View style={[styles.inputRow, { alignItems: 'flex-start' }]}>
-                <Text style={[styles.inputLabel, { marginTop: 12 }]}>Catatan</Text>
+                <Text style={[styles.inputLabel, { marginTop: 12 }]}>{t('notes')}</Text>
                 <TextInput
                   style={[styles.input, { textAlignVertical: 'top', paddingTop: 12 }]}
-                  placeholder="Tambah catatan (opsional)"
+                  placeholder={t('addNoteOptional')}
                   placeholderTextColor="#A9A9A9"
                   value={notes}
                   onChangeText={setNotes}
@@ -190,7 +208,7 @@ const TambahCicilanScreen = ({ navigation }) => {
 
               <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
                 <MaterialCommunityIcons name="content-save-outline" size={22} color="white" style={{marginRight: 10}} />
-                <Text style={styles.saveButtonText}>Simpan</Text>
+                <Text style={styles.saveButtonText}>{t('save')}</Text>
               </TouchableOpacity>
             </View>
           </View>

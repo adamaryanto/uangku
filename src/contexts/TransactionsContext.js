@@ -30,22 +30,23 @@ export const TransactionsProvider = ({ children }) => {
 
   const addTransaction = (newTransaction) => {
     const now = new Date();
-    const formattedDate = formatTransactionDate(now);
-    
-    setTransactions(prevTransactions => [
-      ...prevTransactions,
+    const transactionDate = newTransaction.date 
+      ? new Date(newTransaction.date) 
+      : now;
+  
+    const formattedDate = transactionDate.toISOString().split('T')[0]; // <-- YYYY-MM-DD
+  
+    setTransactions(prev => [
+      ...prev,
       {
         ...newTransaction,
         id: Date.now().toString(),
         date: formattedDate,
-        displayDate: now.toLocaleDateString('id-ID', {
-          day: '2-digit',
-          month: 'long',
-          year: 'numeric'
-        })
       }
     ]);
   };
+  
+  
 
   const addTarget = (newTarget) => {
     const now = new Date();

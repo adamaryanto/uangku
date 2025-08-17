@@ -3,10 +3,12 @@ import { View, Text, StyleSheet, SafeAreaView, ScrollView, FlatList, TouchableOp
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTransactions } from '../../contexts/TransactionsContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 const HomeScreen = ({ navigation, isVisible, onClose }) => {
   const { transactions, getTotalBalance, getTotalIncome, getTotalExpense, getTotalTransferred } = useTransactions();
+  const { t, language } = useLanguage();
   const [showAllTransactions, setShowAllTransactions] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -24,13 +26,20 @@ const HomeScreen = ({ navigation, isVisible, onClose }) => {
     const isToday = date.toDateString() === today.toDateString();
     
     if (isToday) {
-      return 'hari ini';
+      return t('today');
     } else {
-      return date.toLocaleDateString('id-ID', {
+      const locale = language === 'id' ? 'id-ID' : 'en-US';
+      const parts = new Intl.DateTimeFormat(locale, {
         day: '2-digit',
         month: 'long',
         year: 'numeric'
-      });
+      }).formatToParts(date);
+      const get = (type) => parts.find(p => p.type === type)?.value || '';
+      const day = get('day');
+      const month = get('month');
+      const year = get('year');
+      // Compose without commas. Order by locale preference.
+      return language === 'id' ? `${day} ${month} ${year}` : `${day} ${month} ${year}`;
     }
   };
 
@@ -44,12 +53,14 @@ const HomeScreen = ({ navigation, isVisible, onClose }) => {
     
     if (isToday) {
       return {
-        text: 'Transaksi Anda hari ini :',
+        text: t('transactionsTodayTitle'),
         isMultiLine: false
       };
     } else {
       return {
-        text: `Transaksi Anda pada tanggal\n${formatDisplayDate(selectedDate)}`,
+        text: language === 'en'
+          ? `${t('transactionsOnDatePrefix')} ${formatDisplayDate(selectedDate)}`
+          : `${t('transactionsOnDatePrefix')}\n${formatDisplayDate(selectedDate)}`,
         isMultiLine: true
       };
     }
@@ -57,7 +68,7 @@ const HomeScreen = ({ navigation, isVisible, onClose }) => {
 
   // Filter transactions by selected date and exclude target and cicilan transactions
   useEffect(() => {
-    const selectedDateStr = formatDate(selectedDate);
+    const selectedDateStr = selectedDate.toISOString().split('T')[0];
     const filtered = transactions.filter(transaction => {
       // Exclude both Target and Cicilan transactions and match the selected date
       return transaction.type !== 'Target' && 
@@ -138,11 +149,10 @@ const HomeScreen = ({ navigation, isVisible, onClose }) => {
     );
   };
 
-  // Filter out target and cicilan transactions from the main list
-  const nonTargetTransactions = transactions.filter(t => t.type !== 'Target' && t.type !== 'Cicilan');
-  const transactionsToShow = showAllTransactions 
-    ? nonTargetTransactions 
-    : nonTargetTransactions.slice(0, 3);
+  // Use date-filtered transactions for the list display
+  const transactionsToShow = showAllTransactions
+    ? filteredTransactions
+    : filteredTransactions.slice(0, 3);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -153,21 +163,21 @@ const HomeScreen = ({ navigation, isVisible, onClose }) => {
         style={styles.headerContainer}
         imageStyle={styles.headerBackgroundImage}
       >
-        <Text style={styles.headerTitle}>Catat Pemasukan {'\n'}Serta Pengeluaran Anda</Text>
-        <Text style={styles.headerSubtitle}>Semua transaksi kamu, di sini tempatnya.</Text>
+        <Text style={styles.headerTitle}>{language === 'id' ? 'Catat Pemasukan \nSerta Pengeluaran Anda' : 'Record Your Income \nand Expenses'}</Text>
+        <Text style={styles.headerSubtitle}>{language === 'id' ? 'Semua transaksi kamu, di sini tempatnya.' : 'All your transactions, in one place.'}</Text>
       </ImageBackground>
 
       <View showsVerticalScrollIndicator={false}>
         <View style={styles.contentContainer}>
           {/* Date Picker */}
           <View style={styles.datePickerContainer}>
-            <Text style={styles.datePickerLabel}>Tanggal:</Text>
+            <Text style={styles.datePickerLabel}>{t('date')}:</Text>
             <TouchableOpacity 
               style={styles.datePickerButton}
               onPress={showDatepicker}
             >
               <Text style={styles.datePickerText}>
-                {selectedDate.toLocaleDateString('id-ID', {
+                {selectedDate.toLocaleDateString(language === 'id' ? 'id-ID' : 'en-US', {
                   day: '2-digit',
                   month: 'long',
                   year: 'numeric'
@@ -188,7 +198,7 @@ const HomeScreen = ({ navigation, isVisible, onClose }) => {
 
           {/* Kartu Total Dana */}
           <View style={styles.totalBalanceCard}>
-            <Text style={styles.totalBalanceLabel}>Total dana transaksi :</Text>
+            <Text style={styles.totalBalanceLabel}>{t('totalTransactionFunds')}</Text>
             <Text style={styles.totalBalanceAmount}>{formatCurrency(getTotalBalance())}</Text>
           </View>
 
@@ -196,7 +206,7 @@ const HomeScreen = ({ navigation, isVisible, onClose }) => {
           <View style={styles.summaryCardContainer}>
             <View style={styles.summaryCard}>
               <Text style={styles.summaryLabel}>
-                Pemasukan <MaterialCommunityIcons name="arrow-top-right-thin-circle-outline" size={24} color="#27AE60" />
+                {t('income')} <MaterialCommunityIcons name="arrow-top-right-thin-circle-outline" size={24} color="#27AE60" />
               </Text>
               <View>
                 <Text style={[styles.summaryAmount, { color: '#27AE60' }]}>
@@ -206,7 +216,7 @@ const HomeScreen = ({ navigation, isVisible, onClose }) => {
             </View>
             <View style={styles.summaryCard}>
               <Text style={styles.summaryLabel}>
-                Pengeluaran <MaterialCommunityIcons name="arrow-bottom-left-thin-circle-outline" size={24} color="#E74C3C" />
+                {t('expense')} <MaterialCommunityIcons name="arrow-bottom-left-thin-circle-outline" size={24} color="#E74C3C" />
               </Text>
               <View>
                 <Text style={[styles.summaryAmount, { color: '#E74C3C' }]}>
@@ -220,7 +230,7 @@ const HomeScreen = ({ navigation, isVisible, onClose }) => {
           <View style={styles.summaryCardContainer}>
             <View style={styles.summaryCard}>
               <Text style={styles.summaryLabel}>
-                Pindah dana <MaterialCommunityIcons name="swap-horizontal" size={24} color="#3498DB" />
+                {t('transferFunds')} <MaterialCommunityIcons name="swap-horizontal" size={24} color="#3498DB" />
               </Text>
               <Text style={[styles.summaryAmount, { color: '#3498DB' }]}>
                 Rp.{formatNumber(transactions.length > 0 ? getTotalTransferred() : 0)}
@@ -228,7 +238,7 @@ const HomeScreen = ({ navigation, isVisible, onClose }) => {
             </View>
             <View style={styles.summaryCard}>
               <Text style={styles.summaryLabel}>
-                Jumlah Transaksi <MaterialCommunityIcons name="format-list-bulleted" size={24} color="#F39C12" />
+                {t('transactionCount')} <MaterialCommunityIcons name="format-list-bulleted" size={24} color="#F39C12" />
               </Text>
               <Text style={[styles.summaryAmount, { color: '#F39C12', fontSize: 24, fontWeight: 'bold' }]}>{filteredTransactions.length}X</Text>
             </View>
@@ -259,18 +269,18 @@ const HomeScreen = ({ navigation, isVisible, onClose }) => {
             ) : (
               <View style={styles.noTransactions}>
                 <MaterialCommunityIcons name="clipboard-text-outline" size={48} color="#A9A9A9" />
-                <Text style={styles.noTransactionsText}>Belum ada transaksi</Text>
-                <Text style={styles.noTransactionsSubtext}>Tambahkan transaksi pertama Anda</Text>
+                <Text style={styles.noTransactionsText}>{t('noTransactions')}</Text>
+                <Text style={styles.noTransactionsSubtext}>{t('addFirstTransaction')}</Text>
               </View>
             )}
 
             {/* Tombol Lihat Lainnya */}
-            {nonTargetTransactions.length > 3 && !showAllTransactions ? (
+            {filteredTransactions.length > 3 && !showAllTransactions ? (
               <TouchableOpacity 
                 style={styles.seeMoreButton} 
                 onPress={() => setShowAllTransactions(true)}
               >
-                <Text style={styles.seeMoreText}>Lihat Lainnya</Text>
+                <Text style={styles.seeMoreText}>{t('seeMore')}</Text>
               </TouchableOpacity>
             ) : null}
 
@@ -279,7 +289,7 @@ const HomeScreen = ({ navigation, isVisible, onClose }) => {
                 style={styles.seeMoreButton} 
                 onPress={() => setShowAllTransactions(false)}
               >
-                <Text style={styles.seeMoreText}>Tampilkan Lebih Sedikit</Text>
+                <Text style={styles.seeMoreText}>{t('seeLess')}</Text>
               </TouchableOpacity>
             ) : null}
           </View>
@@ -302,25 +312,25 @@ const HomeScreen = ({ navigation, isVisible, onClose }) => {
         <Pressable style={styles.modalOverlay} onPress={() => setIsMenuVisible(false)}>
           <View style={styles.menuContainer}>
             <View style={styles.actionRow}>
-              <Text style={[styles.actionLabel, {backgroundColor: '#727272'}]}>Riwayat Transaksi</Text>
+              <Text style={[styles.actionLabel, {backgroundColor: '#727272'}]}>{t('transactionHistory')}</Text>
               <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#727272'}]} onPress={() => handleNavigate('History')}>
                 <MaterialCommunityIcons name="history" size={24} color="white" />
               </TouchableOpacity>
             </View>
             <View style={styles.actionRow}>
-              <Text style={[styles.actionLabel, {backgroundColor: '#005AE0'}]}>Pindah Dana</Text>
+              <Text style={[styles.actionLabel, {backgroundColor: '#005AE0'}]}>{t('transferFunds')}</Text>
               <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#005AE0'}]} onPress={() => handleNavigate('TransferSaldo')}>
                 <MaterialCommunityIcons name="swap-horizontal" size={24} color="white" />
               </TouchableOpacity>
             </View>
             <View style={styles.actionRow}>
-              <Text style={[styles.actionLabel, {backgroundColor: '#FF4560'}]}>Uang Keluar</Text>
+              <Text style={[styles.actionLabel, {backgroundColor: '#FF4560'}]}>{t('moneyOut')}</Text>
               <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#FF4560'}]} onPress={() => handleNavigate('PengeluaranSaldo')}>
                 <MaterialCommunityIcons name="arrow-down-bold-box" size={24} color="white" />
               </TouchableOpacity>
             </View>
             <View style={styles.actionRow}>
-              <Text style={[styles.actionLabel, {backgroundColor: '#00C7AF'}]}>Uang Masuk</Text>
+              <Text style={[styles.actionLabel, {backgroundColor: '#00C7AF'}]}>{t('moneyIn')}</Text>
               <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#00C7AF'}]} onPress={() => handleNavigate('PemasukanSaldo')}>
                 <MaterialCommunityIcons name="arrow-up-bold-box" size={24} color="white" />
               </TouchableOpacity>
@@ -346,7 +356,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 60,
     paddingBottom: 150,
-    
   },
   headerTitle: {
     fontSize: 28,
@@ -360,7 +369,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
-    marginTop: -130, // Tarik ke atas agar menimpa header
+    marginTop: -130, 
     paddingHorizontal: 20,
     
   },

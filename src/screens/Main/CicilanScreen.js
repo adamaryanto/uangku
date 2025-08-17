@@ -7,12 +7,13 @@ import {
   ScrollView,
   TouchableOpacity,
   ImageBackground,
-  Modal, Pressable 
+  Modal,
+  Pressable 
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTransactions } from '../../contexts/TransactionsContext';
-import { useNavigation } from '@react-navigation/native';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 // Format angka jadi Rupiah
 const formatCurrency = (number) => {
@@ -42,21 +43,16 @@ const ProgressBar = ({ progress }) => {
 };
 
 const CicilanScreen = ({ navigation }) => {
+  const { language, t } = useLanguage();
   const [showAll, setShowAll] = useState(false);
   const [isMenuVisible, setIsMenuVisible] = useState(false);
   const { getCicilanTransactions } = useTransactions();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isSearchFocused, setIsSearchFocused] = useState(false);
   
   // Get cicilan transactions and ensure it's always an array
   const cicilanTransactions = getCicilanTransactions() || [];
   
-  const filteredCicilan = cicilanTransactions.filter(cicil => 
-    cicil && cicil.name && cicil.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
   // Sort by due date (nearest first)
-  const sortedCicilan = [...filteredCicilan].sort((a, b) => {
+  const sortedCicilan = [...cicilanTransactions].sort((a, b) => {
     // Handle cases where dueDate might be undefined
     const getDateValue = (item) => {
       if (!item.dueDate) return new Date(0); // Default to epoch if no date
@@ -111,190 +107,245 @@ const CicilanScreen = ({ navigation }) => {
     navigation.navigate(screenName);
   };
 
+  // Helper: format value to DD-MM-YYYY if possible
+  const toDDMMYYYY = (value) => {
+    if (!value) return null;
+    if (typeof value === 'string') {
+      // already DD-MM-YYYY
+      if (/^\d{2}-\d{2}-\d{4}$/.test(value)) return value;
+      const parts = value.split(/[-\/]/);
+      if (parts.length === 3) {
+        // YYYY-MM-DD
+        if (parts[0].length === 4) {
+          const [y, m, d] = parts;
+          return `${String(d).padStart(2, '0')}-${String(m).padStart(2, '0')}-${y}`;
+        }
+        // DD-MM-YYYY (normalize zero padding)
+        if (parts[2].length === 4) {
+          const [d, m, y] = parts;
+          return `${String(d).padStart(2, '0')}-${String(m).padStart(2, '0')}-${y}`;
+        }
+      }
+    }
+    try {
+      const dt = new Date(value);
+      if (!isNaN(dt)) {
+        const d = String(dt.getDate()).padStart(2, '0');
+        const m = String(dt.getMonth() + 1).padStart(2, '0');
+        const y = dt.getFullYear();
+        return `${d}-${m}-${y}`;
+      }
+    } catch (e) {}
+    return null;
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
 
-      <ScrollView>
+      <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
         <ImageBackground
           source={require('../../assets/image.png')}
           style={styles.headerContainer}
           imageStyle={{ borderBottomLeftRadius: 25, borderBottomRightRadius: 25 }}
         >
-          <Text style={styles.headerTitle}>Kelola Cicilan Anda</Text>
+          <Text style={styles.headerTitle}>{t('manageInstallmentsTitle')}</Text>
           <Text style={styles.headerSubtitle}>
-            Atur dan Pantau semua cicilan aktif serta jatuh temponya
+            {t('manageInstallmentsSubtitle')}
           </Text>
         </ImageBackground>
 
         {/* Konten */}
-        <View style={styles.contentContainer} showsVerticalScrollIndicator={false}>
+        <View style={styles.contentContainer}>
           {/* Filter */}
           <View style={styles.filterContainer}>
             <TouchableOpacity style={[styles.filterButton, { backgroundColor: '#FEB01A' }]}>
-              <Text style={styles.filterButtonText}>
-                Cicilan{'\n'}
+              <View style={styles.filterButtonTextWrap}>
+                <Text
+                  style={styles.filterButtonLabel}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.8}
+                >
+                  {t('installmentsLabel')}
+                </Text>
                 <Text style={styles.filterButtonCount}>{sortedCicilan.length}</Text>
-              </Text>
+              </View>
             </TouchableOpacity>
 
             <TouchableOpacity style={[styles.filterButton, { backgroundColor: '#FF4560' }]}>
-              <Text style={styles.filterButtonText}>
-                Belum Lunas{'\n'}
+              <View style={styles.filterButtonTextWrap}>
+                <Text
+                  style={styles.filterButtonLabel}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.8}
+                >
+                  {t('unpaid')}
+                </Text>
                 <Text style={styles.filterButtonCount}>{pendingCicilan}</Text>
-              </Text>
+              </View>
             </TouchableOpacity>
 
             <TouchableOpacity style={[styles.filterButton, { backgroundColor: '#00C7AF' }]}>
-              <Text style={styles.filterButtonText}>
-                Lunas{'\n'}
+              <View style={styles.filterButtonTextWrap}>
+                <Text
+                  style={styles.filterButtonLabel}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.8}
+                >
+                  {t('paid')}
+                </Text>
                 <Text style={styles.filterButtonCount}>{completedCicilan}</Text>
-              </Text>
+              </View>
             </TouchableOpacity>
           </View>
 
-          {/* Total dana target */}
-          <View style={styles.totalTargetCard}>
-            <Text style={styles.totalTargetLabel}>Total dana Cicilan :</Text>
-            <Text style={styles.totalTargetAmount}>{formatCurrency(totalCicilanAktif)}</Text>
+          {/* Total dana cicilan */}
+          <View style={styles.totalAmountCard}>
+            <Text style={styles.totalAmountLabel}>{t('totalInstallmentFundsLabel')}</Text>
+            <Text style={styles.totalAmountValue}>{formatCurrency(totalCicilanAktif)}</Text>
           </View>
 
           {/* Summary */}
-          <View style={styles.summaryCardContainer}>
+          <View style={styles.summaryContainer}>
             <View style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>Cicilan terpenuhi :</Text>
-              <Text style={[styles.summaryAmount, { color: '#FEB01A' }]}>
+              <Text style={styles.summaryLabel}>{t('installmentsFulfilled')}</Text>
+              <Text style={[styles.summaryAmount, { color: '#FEB01A' }]}> 
                 +{formatCurrency(totalPaid)}
               </Text>
             </View>
             <View style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>Sisa cicilan :</Text>
-              <Text style={[styles.summaryAmount, { color: '#E63950' }]}>
+              <Text style={styles.summaryLabel}>{t('remainingInstallments')}</Text>
+              <Text style={[styles.summaryAmount, { color: '#E63950' }]}> 
                 -{formatCurrency(totalRemaining)}
               </Text>
             </View>
           </View>
 
-       {/* List Cicilan */}
-       <View style={styles.allTargetsCard}>
-          {/* Cek apakah ada data cicilan setelah difilter */}
-          {sortedCicilan.length > 0 ? (
-            // Jika ADA, tampilkan judul dan daftarnya
-            <>
-              <Text style={styles.targetListTitle}>Cicilan anda :</Text>
-              
-              {cicilanToShow.map((item) => {
-                const total = parseFloat(item.totalCicilan || 0);
-                const paid = parseFloat(item.paidAmount || 0);
-                const remaining = Math.max(0, total - paid);
-                const progress = total > 0 ? (paid / total) * 100 : 0;
-                const isPaidOff = paid >= total;
+          {/* List Cicilan */}
+          <View style={styles.itemsCard}>
+            {/* Cek apakah ada data cicilan setelah difilter */}
+            {sortedCicilan.length > 0 ? (
+              <>
+                <Text style={styles.itemsTitle}>{t('yourInstallments')}</Text>
                 
-                return (
-                  <View key={item.id} style={styles.targetItemRow}>
-                    {/* ... (kode render item Anda tidak berubah) ... */}
-                    <View style={styles.targetItemHeader}>
-                      <View style={styles.targetIconContainer}>
-                        <MaterialCommunityIcons name="credit-card-multiple-outline" size={24} color="#005AE0" />
+                {cicilanToShow.map((item) => {
+                  const total = parseFloat(item.totalCicilan || 0);
+                  const paid = parseFloat(item.paidAmount || 0);
+                  const remaining = Math.max(0, total - paid);
+                  const progress = total > 0 ? Math.min(100, (paid / total) * 100) : 0;
+                  const isPaidOff = paid >= total;
+                  const endDateLabel = toDDMMYYYY(item?.dueDate) || toDDMMYYYY(item?.date);
+                  
+                  return (
+                    <View key={item.id} style={styles.itemRow}>
+                      <View style={styles.itemHeader}>
+                        <View style={styles.iconContainer}>
+                          <MaterialCommunityIcons name="credit-card-multiple-outline" size={24} color="#005AE0" />
+                        </View>
+                        <View style={styles.itemDetails}>
+                          <Text style={styles.itemName}>{item.name || '-'}</Text>
+                          <Text style={styles.itemCollected}>{t('collected')}: {formatCurrency(paid)}</Text>
+                          <Text style={styles.itemRemaining}>{t('remaining')}: {formatCurrency(remaining)}</Text>
+                        </View>
+                        <View style={styles.itemAmountContainer}>
+                          <Text style={styles.itemTarget}>{t('target')}: {formatCurrency(total)}</Text>
+                          <Text style={styles.itemDate}>{t('dueDate2')}: {endDateLabel || '-'}</Text>
+                        </View>
                       </View>
-                      <View style={styles.targetItemDetails}>
-                        <Text style={styles.targetItemName}>{item.name || 'Tanpa Nama'}</Text>
-                        <Text style={styles.targetItemSaved}>Dibayar: {formatCurrency(paid)}</Text>
-                        <Text style={styles.targetItemRemaining}>Sisa: {formatCurrency(remaining)}</Text>
+                      <View style={styles.itemAmountContainer}>
+                        <View style={styles.rightAlignedRow}>
+                          <Text style={[styles.itemDate, { color: isPaidOff ? '#27AE60' : '#E74C3C' }]}>
+                            {isPaidOff ? t('paidOff') : t('notPaidOff')}
+                          </Text>
+                          <TouchableOpacity 
+                            onPress={() => navigation.navigate('UpdateCicilanProgress', { cicilan: item })}
+                            style={styles.chevronButton}
+                          >
+                            <MaterialCommunityIcons name="chevron-right" size={24} color="#666" />
+                          </TouchableOpacity>
+                        </View>
                       </View>
-                      <View style={styles.targetItemAmountContainer}>
-                        <Text style={styles.targetItemTarget}>Total: {formatCurrency(total)}</Text>
-                        <Text style={styles.targetItemDate}>Jatuh Tempo: {item.dueDate}</Text>
+                      <View style={styles.progressContainer}>
+                        <Text style={styles.progressText}>{Math.floor(progress)}%</Text>
+                        <ProgressBar progress={progress} />
+                        <Text style={styles.progressText}>100%</Text>
                       </View>
                     </View>
-                    <View style={styles.targetItemAmountContainer}>
-                      <View style={styles.rightAlignedRow}>
-                        <Text style={[styles.targetItemDate, { color: isPaidOff ? '#27AE60' : '#E74C3C' }]}>
-                          {isPaidOff ? 'Lunas' : 'Belum Lunas'}
-                        </Text>
-                        <TouchableOpacity 
-                          onPress={() => navigation.navigate('UpdateCicilanProgress', { cicilan: item })}
-                          style={styles.chevronButton}
-                        >
-                          <MaterialCommunityIcons name="chevron-right" size={24} color="#666" />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                    <View style={styles.progressContainer}>
-                      <Text style={styles.progressText}>{Math.min(100, Math.floor(progress))}%</Text>
-                      <ProgressBar progress={progress} />
-                      <Text style={styles.progressText}>100%</Text>
-                    </View>
-                  </View>
-                );
-              })}
+                  );
+                })}
 
-              {/* Tombol Lihat Lainnya */}
-              {sortedCicilan.length > 3 && !showAll && (
-                <TouchableOpacity
-                  style={styles.seeMoreButton}
-                  onPress={() => setShowAll(true)}
-                >
-                  <Text style={styles.seeMoreText}>Lihat Lainnya</Text>
-                </TouchableOpacity>
-              )}
-              {showAll && sortedCicilan.length > 3 && (
-                <TouchableOpacity
-                  style={styles.seeMoreButton}
-                  onPress={() => setShowAll(false)}
-                >
-                  <Text style={styles.seeMoreText}>Tampilkan Lebih Sedikit</Text>
-                </TouchableOpacity>
-              )}
-            </>
-          ) : (
-            // Jika TIDAK ADA, tampilkan pesan kosong
-            <View style={styles.noCicilan}>
-              <MaterialCommunityIcons name="credit-card-off-outline" size={48} color="#A9A9A9" />
-              <Text style={styles.noCicilanText}>Belum Ada Cicilan</Text>
-              <Text style={styles.noCicilanSubtext}>Tambahkan cicilan pertama Anda</Text>
-            </View>
-          )}
-        </View>
+                {/* Tombol Lihat Lainnya */}
+                {sortedCicilan.length > 3 && !showAll && (
+                  <TouchableOpacity
+                    style={styles.seeMoreButton}
+                    onPress={() => setShowAll(true)}
+                  >
+                    <Text style={styles.seeMoreText}>{t('seeMore')}</Text>
+                  </TouchableOpacity>
+                )}
+                {showAll && sortedCicilan.length > 3 && (
+                  <TouchableOpacity
+                    style={styles.seeMoreButton}
+                    onPress={() => setShowAll(false)}
+                  >
+                    <Text style={styles.seeMoreText}>{t('seeLess')}</Text>
+                  </TouchableOpacity>
+                )}
+              </>
+            ) : (
+              <View style={styles.noItems}>
+                <MaterialCommunityIcons name="credit-card-off-outline" size={48} color="#A9A9A9" />
+                <Text style={styles.noItemsText}>{t('noInstallmentsYet')}</Text>
+                <Text style={styles.noItemsSubtext}>{t('addFirstInstallment')}</Text>
+              </View>
+            )}
+          </View>
         </View>
       </ScrollView>
 
       {/* Floating Button */}
-       <TouchableOpacity style={styles.fab} onPress={() => setIsMenuVisible(true)}>
-                    <MaterialCommunityIcons name="plus" size={32} color="#FEB019" />
-                  </TouchableOpacity>
-                  <Modal
-                    animationType="fade"
-                    transparent={true}
-                    visible={isMenuVisible}
-                    onRequestClose={() => setIsMenuVisible(false)}
-                  >
-                    <Pressable style={styles.modalOverlay} onPress={() => setIsMenuVisible(false)}>
-                      <View style={styles.menuContainer}>
-                        {/* Tombol Aksi */}
-                        <View style={styles.actionRow}>
-                          <Text style={[styles.actionLabel,{backgroundColor: '#727272'}]}>Riwayat Cicilan</Text>
-                          <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#727272'}]}>
-                            <MaterialCommunityIcons name="history" size={24} color="white" />
-                          </TouchableOpacity>
-                        </View>
-                    
-                        <View style={styles.actionRow}>
-                          <Text style={[styles.actionLabel,{backgroundColor: '#00C7AF'}]}>Tambah Cicilan Baru</Text>
-                          <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#00C7AF'}]} onPress={() => handleNavigate('TambahCicilan')}>
-                            {/* Ikon diubah menjadi pensil */}
-                            <MaterialCommunityIcons name="pencil-plus-outline" size={24} color="white" />
-                          </TouchableOpacity>
-                        </View>
-                        
-                        {/* Tombol Tutup */}
-                        <TouchableOpacity style={styles.closeButton} onPress={() => setIsMenuVisible(false)}>
-                          <MaterialCommunityIcons name="close" size={32} color="#005AE0" />
-                        </TouchableOpacity>
-                      </View>
-                    </Pressable>
-                  </Modal>
+      <TouchableOpacity style={styles.fab} onPress={() => setIsMenuVisible(true)}>
+        <MaterialCommunityIcons name="plus" size={32} color="#FEB019" />
+      </TouchableOpacity>
+      
+      {/* Modal Menu */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={isMenuVisible}
+        onRequestClose={() => setIsMenuVisible(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setIsMenuVisible(false)}>
+          <View style={styles.menuContainer}>
+            {/* Tombol Aksi */}
+            <View style={styles.actionRow}>
+              <Text style={[styles.actionLabel, { backgroundColor: '#727272' }]}>{t('installmentHistory')}</Text>
+              <TouchableOpacity style={[styles.actionButton, { backgroundColor: '#727272' }]}>
+                <MaterialCommunityIcons name="history" size={24} color="white" />
+              </TouchableOpacity>
+            </View>
+        
+            <View style={styles.actionRow}>
+              <Text style={[styles.actionLabel, { backgroundColor: '#00C7AF' }]}>{t('addNewInstallment')}</Text>
+              <TouchableOpacity 
+                style={[styles.actionButton, { backgroundColor: '#00C7AF' }]} 
+                onPress={() => handleNavigate('TambahCicilan')}
+              >
+                <MaterialCommunityIcons name="pencil-plus-outline" size={24} color="white" />
+              </TouchableOpacity>
+            </View>
+            
+            {/* Tombol Tutup */}
+            <TouchableOpacity style={styles.closeButton} onPress={() => setIsMenuVisible(false)}>
+              <MaterialCommunityIcons name="close" size={32} color="#005AE0" />
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -312,72 +363,67 @@ const styles = StyleSheet.create({
     paddingBottom: 180,
   },
   headerTitle: {
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: 'bold',
     color: 'white',
   },
   headerSubtitle: {
-    fontSize: 15,
-    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.8)',
     marginTop: 5,
   },
   contentContainer: {
     flex: 1,
     marginTop: -130,
     paddingHorizontal: 20,
-    justifyContent: 'space-between',
-    
   },
   filterContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 10,
-    
     borderRadius: 6,
   },
-    filterButton: {
-    flexDirection: 'row', // <-- 1. Buat konten jadi horizontal
-    justifyContent: 'center', // <-- 2. Pusatkan konten di dalam tombol
+  filterButton: {
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical:8, // <-- 3. Kurangi padding vertikal agar lebih pendek
-    paddingHorizontal: 0, // Kurangi juga padding horizontal
-    borderRadius: 5,
-    width: '32%',
     padding: 10,
-    gap:10,
+    borderRadius: 5,
+    width: '31%',
   },
-  filterButtonText: {
+  filterButtonTextWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filterButtonLabel: {
     color: 'white',
-    fontSize: 13, // <-- 4. Kecilkan sedikit font
+    fontSize: 13,
     fontWeight: 'bold',
-    marginBottom:5,
-    
     textAlign: 'center',
   },
   filterButtonCount: {
-   fontSize: 17,
+    fontSize: 17,
     fontWeight: 'bold',
     color: 'white'
   },
-  totalTargetCard: {
+  totalAmountCard: {
     backgroundColor: 'white',
     borderRadius: 6,
     padding: 15,
-    marginTop:5,
-    alignItems: 'start',
+    marginTop: 5,
+    alignItems: 'flex-start',
   },
-  totalTargetLabel: {
+  totalAmountLabel: {
     fontSize: 16,
     color: 'black',
-    fontWeight:'bold',
+    fontWeight: 'bold',
   },
-  totalTargetAmount: {
+  totalAmountValue: {
     fontSize: 32,
     fontWeight: 'bold',
     color: '#005AE0',
     marginTop: 5,
   },
-  summaryCardContainer: {
+  summaryContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 15,
@@ -386,7 +432,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 6,
     padding: 10,
-    
     width: '48%',
     elevation: 2,
     shadowColor: '#000',
@@ -404,61 +449,81 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: 'bold',
   },
-  targetListTitle: {
+  itemsTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
-    marginTop: 25,
-    marginBottom: 15,
+    color: '#111',
+    marginBottom: 10,
   },
-  targetItemCard: {
-    backgroundColor: 'white',
-    borderRadius: 15,
-    padding: 15,
-    marginBottom: 15,
+  itemsCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    marginTop: 16,
+    elevation: 3,
   },
-  targetItemHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  targetIconContainer: {
-    backgroundColor: '#E8F0FE',
-    borderRadius: 10,
-    width: 45,
-    height: 45,
+  noItems: {
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 15,
+    paddingVertical: 40,
+    paddingHorizontal: 20,
   },
-  targetItemDetails: {
+  noItemsText: {
+    fontSize: 18,
+    color: '#333',
+    fontWeight: 'bold',
+    marginTop: 15,
+    marginBottom: 10,
+  },
+  noItemsSubtext: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+  },
+  itemRow: {
+    marginBottom: 16,
+    paddingBottom: 12,
+  },
+  itemHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 14,
+    justifyContent: 'space-between',
+  },
+  iconContainer: {
+    backgroundColor: '#EAF2FF',
+    padding: 8,
+    borderRadius: 8,
+    marginRight: 10,
+  },
+  itemDetails: {
     flex: 1,
   },
-  targetItemName: {
+  itemName: {
     fontSize: 14,
     fontWeight: 'bold',
     color: '#333',
   },
-  targetItemSaved: {
+  itemCollected: {
     fontSize: 13,
-    color: '#005AE0',
-    fontWeight: '500',
-    marginTop: 2,
+    color: 'orange',
   },
-  targetItemRemaining: {
+  itemRemaining: {
     fontSize: 13,
     color: '#E63950',
     fontWeight: '500',
     marginTop: 2,
   },
-  targetItemAmountContainer: {
+  itemAmountContainer: {
     alignItems: 'flex-end',
   },
-  targetItemTarget: {
+  itemTarget: {
     fontSize: 13,
     fontWeight: 'bold',
     color: '#E63950',
   },
-  targetItemDate: {
+  itemDate: {
     fontSize: 11,
     color: '#888',
   },
@@ -472,126 +537,12 @@ const styles = StyleSheet.create({
   progressContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 10,
-  },
-  progressText: {
-    fontSize: 12,
-    color: '#666',
-    width: 40,
-  },
-  progressBarBackground: {
-    flex: 1,
-    height: 8,
-    backgroundColor: '#E0E0E0',
-    borderRadius: 4,
-    marginHorizontal: 5,
-  },
-  progressBarFill: {
-    height: 8,
-    backgroundColor: '#27AE60',
-    borderRadius: 4,
-  },
-  allTargetsCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom:20,
-    marginTop: 16,
-    
-    elevation: 3, // untuk Android
-  },
-  
-  noCicilan: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 40,
-    paddingHorizontal: 20,
-  },
-  noCicilanText: {
-    fontSize: 18,
-    color: '#333',
-    fontWeight: 'bold',
-    marginTop: 15,
-    marginBottom: 10,
-  },
-  noCicilanSubtext: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-  },
-
-  targetListTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#111',
-    marginBottom: 10,
-    
-  },
-  
-  targetItemRow: {
-    marginBottom: 16,
-    
-    paddingBottom: 12,
-  },
-  
-  targetItemHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop:14,
-    justifyContent: 'space-between',
-  },
-  
-  targetIconContainer: {
-    backgroundColor: '#EAF2FF',
-    padding: 8,
-    borderRadius: 8,
-    marginRight: 10,
-  },
-  
-  targetItemDetails: {
-    flex: 1,
-  },
-  
-  targetItemName: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  
-  targetItemSaved: {
-    fontSize: 13,
-    color: 'orange',
-  },
-  
-  targetItemAmountContainer: {
-    alignItems: 'flex-end',
-  },
-  
-  targetItemTarget: {
-    fontSize: 13,
-    fontWeight: 'bold',
-    color: '#E63950',
-  },
-  
-  targetItemDate: {
-    fontSize: 11,
-    color: '#888',
-  },
-  
-  progressContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
     marginTop: 8,
   },
-  
   progressText: {
     fontSize: 12,
     color: '#555',
     marginHorizontal: 4,
-  },
-  
-  chevronButton: {
-    padding: 8,
   },
   progressBarBackground: {
     flex: 1,
@@ -600,18 +551,15 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     overflow: 'hidden',
   },
-  
   progressBarFill: {
     height: 8,
     backgroundColor: '#FEB01A',
     borderRadius: 4,
   },
-  
   seeMoreButton: {
     paddingVertical: 8,
     alignItems: 'center',
     marginTop: 1,
-    
     borderRadius: 8,
   },
   seeMoreText: {
@@ -619,8 +567,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  
-  
   fab: {
     position: 'absolute',
     bottom: 30,
@@ -635,24 +581,22 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)', // Background semi-transparan
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
     justifyContent: 'flex-end',
     alignItems: 'flex-end',
     padding: 20,
   },
   menuContainer: {
     alignItems: 'flex-end',
-    marginBottom: 70, // Posisikan di atas FAB
+    marginBottom: 70,
   },
   actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    
     marginBottom: 20,
     width: '100%',
   },
   actionLabel: {
-    
     color: 'white',
     paddingVertical: 12,
     paddingHorizontal: 8,
@@ -670,7 +614,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 3,
-    
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
@@ -683,7 +626,7 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 1, // Jarak dari tombol aksi terakhir
+    marginTop: 1,
   },
 });
 

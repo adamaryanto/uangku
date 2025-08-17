@@ -17,11 +17,13 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTransactions } from '../../contexts/TransactionsContext';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const UpdateTargetProgressScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { target } = route.params;
+  const { language, t } = useLanguage();
   
   const [amount, setAmount] = useState('');
   const [notes, setNotes] = useState('');
@@ -30,7 +32,7 @@ const UpdateTargetProgressScreen = () => {
   const { updateTargetProgress } = useTransactions();
 
   const formatDate = (date) => {
-    return date.toLocaleDateString('id-ID', {
+    return date.toLocaleDateString(language === 'id' ? 'id-ID' : 'en-US', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric'
@@ -46,14 +48,14 @@ const UpdateTargetProgressScreen = () => {
 
   const handleSave = () => {
     if (!amount) {
-      Alert.alert('Error', 'Jumlah dana harus diisi');
+      Alert.alert(t('error'), t('amountRequired'));
       return;
     }
 
     const numericAmount = parseInt(amount.replace(/\D/g, ''), 10);
     
     if (isNaN(numericAmount) || numericAmount <= 0) {
-      Alert.alert('Error', 'Jumlah dana harus berupa angka yang valid dan lebih dari 0');
+      Alert.alert(t('error'), t('amountMustBeValid'));
       return;
     }
 
@@ -67,7 +69,7 @@ const UpdateTargetProgressScreen = () => {
 
     updateTargetProgress(target.id, progressUpdate);
     
-    Alert.alert('Sukses', 'Progress target berhasil diperbarui', [
+    Alert.alert(t('success'), t('progressUpdatedSuccess'), [
       { text: 'OK', onPress: () => navigation.goBack() }
     ]);
   };
@@ -81,6 +83,11 @@ const UpdateTargetProgressScreen = () => {
     const rawValue = text.replace(/\./g, '');
     setAmount(rawValue);
   };
+
+  // Disable save if amount > remaining (Sisa)
+  const numericAmount = parseInt((amount || '').replace(/\D/g, ''), 10);
+  const remainingAmount = Math.max(0, (target.targetAmount || 0) - (target.savedAmount || 0));
+  const isDisabled = !amount || isNaN(numericAmount) || numericAmount <= 0 || numericAmount > remainingAmount;
 
   return (
     <ImageBackground
@@ -100,11 +107,11 @@ const UpdateTargetProgressScreen = () => {
                 onPress={() => navigation.goBack()}
               >
                 <MaterialCommunityIcons name="chevron-left" size={32} color="white" />
-                <Text style={styles.backButtonText}>Kembali</Text>
+                <Text style={styles.backButtonText}>{t('back')}</Text>
               </TouchableOpacity>
-              <Text style={styles.headerTitle}>Update Progress Target</Text>
+              <Text style={styles.headerTitle}>{t('updateTargetProgress')}</Text>
               <Text style={styles.headerSubtitle}>
-                Tambahkan dana untuk target: {target.name}
+                {t('addFundsForTarget')} {target.name}
               </Text>
             </View>
 
@@ -113,7 +120,7 @@ const UpdateTargetProgressScreen = () => {
                 <View style={styles.targetInfo}>
                   <Text style={styles.targetName}>{target.name}</Text>
                   <Text style={styles.targetAmount}>
-                    Tersimpan: Rp{parseInt(target.savedAmount).toLocaleString('id-ID')} / Rp{parseInt(target.targetAmount).toLocaleString('id-ID')}
+                    {t('collected')}: Rp{parseInt(target.savedAmount).toLocaleString('id-ID')} / Rp{parseInt(target.targetAmount).toLocaleString('id-ID')}
                   </Text>
                   <View style={styles.progressContainer}>
                     <View style={styles.progressBarBackground}>
@@ -131,12 +138,12 @@ const UpdateTargetProgressScreen = () => {
                     </Text>
                   </View>
                    <Text style={styles.remainingAmount}>
-                                      Sisa: Rp{Math.max(0, target.targetAmount - (target.savedAmount || 0)).toLocaleString('id-ID')}
-                                    </Text>
+                      {t('remaining')}: Rp{Math.max(0, target.targetAmount - (target.savedAmount || 0)).toLocaleString('id-ID')}
+                   </Text>
                 </View>
 
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Jumlah Dana</Text>
+                  <Text style={styles.inputLabel}>{t('amount')}</Text>
                   <View style={styles.amountInputContainer}>
                     <Text style={styles.currencyPrefix}>Rp</Text>
                     <TextInput
@@ -151,7 +158,7 @@ const UpdateTargetProgressScreen = () => {
                 </View>
 
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Tanggal</Text>
+                  <Text style={styles.inputLabel}>{t('date')}</Text>
                   <TouchableOpacity 
                     style={styles.dateInput}
                     onPress={() => setShowDatePicker(true)}
@@ -166,16 +173,15 @@ const UpdateTargetProgressScreen = () => {
                       mode="date"
                       display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                       onChange={handleDateChange}
-                      maximumDate={new Date()}
                     />
                   )}
                 </View>
 
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Catatan (Opsional)</Text>
+                  <Text style={styles.inputLabel}>{t('notes')} (Opsional)</Text>
                   <TextInput
                     style={[styles.input, styles.notesInput]}
-                    placeholder="Contoh: Tabungan gaji bulan ini"
+                    placeholder={t('addNoteOptional')}
                     placeholderTextColor="#A9A9A9"
                     value={notes}
                     onChangeText={setNotes}
@@ -185,8 +191,9 @@ const UpdateTargetProgressScreen = () => {
                 </View>
 
                 <TouchableOpacity 
-                  style={styles.saveButton}
-                  onPress={handleSave}
+                  style={[styles.saveButton, { backgroundColor: isDisabled ? '#9AA5B1' : '#005AE0' }]}
+                  onPress={isDisabled ? null : handleSave}
+                  disabled={isDisabled}
                 >
                   <MaterialCommunityIcons 
                     name="check-circle-outline" 
@@ -194,7 +201,7 @@ const UpdateTargetProgressScreen = () => {
                     color="white" 
                     style={{ marginRight: 10 }} 
                   />
-                  <Text style={styles.saveButtonText}>Simpan Progress</Text>
+                  <Text style={styles.saveButtonText}>{t('save')}</Text>
                 </TouchableOpacity>
               </View>
             </View>

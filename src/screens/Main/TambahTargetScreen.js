@@ -5,6 +5,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useTransactions } from '../../contexts/TransactionsContext';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 // Komponen Input Kustom
 const LabeledInput = ({ label, placeholder, value, onChangeText, keyboardType = 'default' }) => (
@@ -31,21 +32,22 @@ const TambahTargetScreen = ({ navigation }) => {
   const [endDate, setEndDate] = useState('');
   
   const { addTarget } = useTransactions();
+  const { language, t } = useLanguage();
 
   const formatDate = (date) => {
-    return date.toLocaleDateString('id-ID', {
+    return date.toLocaleDateString(language === 'id' ? 'id-ID' : 'en-US', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric'
     }).replace(/\//g, '-');
   };
 
-  const handleTargetDateChange = (event, date) => {
-    setShowDatePicker(Platform.OS === 'ios');
-    if (date) {
-      setSelectedDate(date);
-      setTargetDate(formatDate(date));
-    }
+  const parseDate = (dateStr) => {
+    // Expecting format DD-MM-YYYY
+    if (!dateStr) return null;
+    const [dd, mm, yyyy] = dateStr.split('-').map((v) => parseInt(v, 10));
+    if (!dd || !mm || !yyyy) return null;
+    return new Date(yyyy, mm - 1, dd);
   };
 
   const handleStartDateChange = (event, date) => {
@@ -58,13 +60,21 @@ const TambahTargetScreen = ({ navigation }) => {
   const handleEndDateChange = (event, date) => {
     setShowEndDatePicker(Platform.OS === 'ios');
     if (date) {
+      // Validate end date is not before start date if startDate exists
+      if (startDate) {
+        const start = parseDate(startDate);
+        if (start && date < start) {
+          Alert.alert(t('error'), t('endDateMustBeAfterStartDate'));
+          return;
+        }
+      }
       setEndDate(formatDate(date));
     }
   };
 
   const handleSave = () => {
     if (!name || !targetAmount) {
-      Alert.alert('Error', 'Nama target dan jumlah target wajib diisi.');
+      Alert.alert(t('error'), t('targetNameAndAmountRequired'));
       return;
     }
 
@@ -72,7 +82,7 @@ const TambahTargetScreen = ({ navigation }) => {
     const amount = parseInt(targetAmount.replace(/\D/g, ''), 10);
     
     if (isNaN(amount) || amount <= 0) {
-      Alert.alert('Error', 'Jumlah target harus berupa angka yang valid dan lebih dari 0');
+      Alert.alert(t('error'), t('targetAmountMustBeValid'));
       return;
     }
 
@@ -81,14 +91,14 @@ const TambahTargetScreen = ({ navigation }) => {
       name: name.trim(),
       targetAmount: amount,
       savedAmount: 0,
-      date: new Date().toLocaleDateString('id-ID').replace(/\//g, '-'),
+      date: new Date().toLocaleDateString(language === 'id' ? 'id-ID' : 'en-US').replace(/\//g, '-'),
       notes: notes.trim()
     };
 
     addTarget(newTarget);
     
     
-    Alert.alert('Sukses', 'Target berhasil ditambahkan.', [
+    Alert.alert(t('success'), t('targetAddedSuccess'), [
       { text: 'OK', onPress: () => navigation.goBack() }
     ]);
   };
@@ -122,32 +132,32 @@ const TambahTargetScreen = ({ navigation }) => {
           <View style={styles.headerContainer}>
             <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
               <MaterialCommunityIcons name="chevron-left" size={32} color="white" />
-              <Text style={styles.backButtonText}>Kembali</Text>
+              <Text style={styles.backButtonText}>{t('back')}</Text>
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Target</Text>
-            <Text style={styles.headerSubtitle}>Catat Semua tujuan keuangan yang kamu punya, seperti traveling, atau lainya</Text>
+            <Text style={styles.headerTitle}>{t('target')}</Text>
+            <Text style={styles.headerSubtitle}>{t('manageAndTrackTargets')}</Text>
           </View>
 
           <View style={styles.contentContainer}>
             <View style={styles.formCard}>
               <View style={styles.card}>
                 <View style={styles.cardHeader}>
-                  <Text style={styles.cardTitle}>Periode Transaksi :</Text>
+                  <Text style={styles.cardTitle}>{t('transactionPeriod')}</Text>
                 </View>
                 <View style={styles.dateContainer}>
                   <TouchableOpacity
                     style={styles.datePicker}
                     onPress={() => setShowStartDatePicker(true)}
                   >
-                    <Text style={styles.dateLabel}>Dari tanggal :</Text>
-                    <Text style={styles.dateValue}>{startDate || 'DD-MM-YYYY'}</Text>
+                    <Text style={styles.dateLabel}>{t('fromDate')}</Text>
+                    <Text style={styles.dateValue}>{startDate || t('datePlaceholder')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.datePickerEnd}
                     onPress={() => setShowEndDatePicker(true)}
                   >
-                    <Text style={[styles.dateLabel, { textAlign: 'right' }]}>Sampai tanggal :</Text>
-                    <Text style={[styles.dateValue, { textAlign: 'right' }]}>{endDate || 'DD-MM-YYYY'}</Text>
+                    <Text style={[styles.dateLabel, { textAlign: 'right' }]}>{t('toDate')}</Text>
+                    <Text style={[styles.dateValue, { textAlign: 'right' }]}>{endDate || t('datePlaceholder')}</Text>
                   </TouchableOpacity>
                 </View>
                 {showStartDatePicker && (
@@ -164,28 +174,29 @@ const TambahTargetScreen = ({ navigation }) => {
                     mode="date"
                     display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                     onChange={handleEndDateChange}
+                    minimumDate={parseDate(startDate) || undefined}
                   />
                 )}
               </View>
 
               <LabeledInput 
-                label="Nama Target"
-                placeholder="Contoh: Liburan ke Bali"
+                label={t('targetNameLabel')}
+                placeholder={t('exampleTargetName')}
                 value={name}
                 onChangeText={setName}
               />
               <LabeledInput 
-                label="Jumlah Target"
-                placeholder="Contoh: 5.000.000"
+                label={t('targetAmountLabel')}
+                placeholder={t('exampleTargetAmount')}
                 value={formatCurrencyInput(targetAmount)}
                 onChangeText={handleAmountChange}
                 keyboardType="numeric"
               />
-              <View style={[styles.inputRow, { alignItems: 'flex-start' }]}>
-                <Text style={[styles.inputLabel, { marginTop: 12 }]}>Catatan</Text>
+              <View style={[styles.inputRow, { alignItems: 'flex-start' }]}> 
+                <Text style={[styles.inputLabel, { marginTop: 12 }]}>{t('notes')}</Text>
                 <TextInput
                   style={[styles.input, { textAlignVertical: 'top', paddingTop: 12 }]}
-                  placeholder="Tambah catatan (opsional)"
+                  placeholder={t('addNoteOptional')}
                   placeholderTextColor="#A9A9A9"
                   value={notes}
                   onChangeText={setNotes}
@@ -196,7 +207,7 @@ const TambahTargetScreen = ({ navigation }) => {
 
               <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
                 <MaterialCommunityIcons name="content-save-outline" size={22} color="white" style={{marginRight: 10}} />
-                <Text style={styles.saveButtonText}>Simpan</Text>
+                <Text style={styles.saveButtonText}>{t('save')}</Text>
               </TouchableOpacity>
             </View>
           </View>

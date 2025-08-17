@@ -4,6 +4,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTransactions } from '../../contexts/TransactionsContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 // Komponen Input Kustom
 const LabeledInput = ({ label, placeholder, value, onChangeText, keyboardType = 'default', onPress }) => (
@@ -30,6 +31,7 @@ const LabeledInput = ({ label, placeholder, value, onChangeText, keyboardType = 
 const CicilanDetailScreen = ({ route, navigation}) => {
     const { cicilan } = route.params || {};
     const isEditMode = !!cicilan;
+    const { t } = useLanguage();
   
     const [namaCicilan, setNamaCicilan] = useState(cicilan?.name || '');
     const [totalCicilan, setTotalCicilan] = useState(cicilan?.totalCicilan?.toString() || '');
@@ -58,14 +60,14 @@ const CicilanDetailScreen = ({ route, navigation}) => {
 
   const handleSave = () => {
     if (!namaCicilan || !totalCicilan || !jatuhTempo) {
-      Alert.alert('Error', 'Nama cicilan, total cicilan, dan jatuh tempo wajib diisi.');
+      Alert.alert(t('error'), t('installmentNameTotalDueRequired'));
       return;
     }
 
     const totalAmount = parseFloat(totalCicilan.replace(/\./g, ''));
     
     if (isNaN(totalAmount) || totalAmount <= 0) {
-      Alert.alert('Error', 'Jumlah harus berupa angka yang valid dan lebih dari 0');
+      Alert.alert(t('error'), t('installmentAmountMustBeValid'));
       return;
     }
 
@@ -80,13 +82,13 @@ const CicilanDetailScreen = ({ route, navigation}) => {
 
     if (isEditMode) {
       updateCicilan(cicilanData);
-      Alert.alert('Sukses', 'Cicilan berhasil diperbarui.', [
-        { text: 'OK', onPress: () => navigation.goBack() }
+      Alert.alert(t('success'), t('installmentUpdatedSuccess'), [
+        { text: t('ok'), onPress: () => navigation.goBack() }
       ]);
     } else {
       addCicilan(cicilanData);
-      Alert.alert('Sukses', 'Cicilan berhasil ditambahkan.', [
-        { text: 'OK', onPress: () => navigation.goBack() }
+      Alert.alert(t('success'), t('installmentAddedSuccess'), [
+        { text: t('ok'), onPress: () => navigation.goBack() }
       ]);
     }
   };
@@ -113,10 +115,10 @@ const CicilanDetailScreen = ({ route, navigation}) => {
           <View style={styles.headerContainer}>
             <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
               <MaterialCommunityIcons name="chevron-left" size={32} color="white" />
-              <Text style={styles.backButtonText}>Kembali</Text>
+              <Text style={styles.backButtonText}>{t('back')}</Text>
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Cicilan</Text>
-            <Text style={styles.headerSubtitle}>Catat Semua Cicilan Yang Kamu Punya Seperti Cicilan Rumah,crypto,atau lainya</Text>
+            <Text style={styles.headerTitle}>{t('installmentsLabel')}</Text>
+            <Text style={styles.headerSubtitle}>{t('manageInstallmentsSubtitle')}</Text>
           </View>
 
           <View style={styles.contentContainer}>
@@ -124,45 +126,45 @@ const CicilanDetailScreen = ({ route, navigation}) => {
                  <View style={styles.card}>
                            {/* --- DIUBAH --- Judul dan tombol sekarang dibungkus dalam satu View --- */}
                            <View style={styles.cardHeader}>
-                               <Text style={styles.cardTitle}>Periode Transaksi :</Text>
+                               <Text style={styles.cardTitle}>{t('transactionPeriod')}</Text>
 
                            </View>
                            <View style={styles.dateContainer}>
                                <TouchableOpacity style={styles.datePicker}>
-                                   <Text style={styles.dateLabel}>Dari tanggal :</Text>
-                                   <Text style={styles.dateValue}>31-07-2025</Text>
+                                   <Text style={styles.dateLabel}>{t('fromDate')}</Text>
+                                   <Text style={styles.dateValue}>{t('datePlaceholder')}</Text>
                                </TouchableOpacity>
                                <TouchableOpacity style={styles.datePicker}>
-                                   <Text style={styles.dateLabel}>Sampai tanggal :</Text>
-                                   <Text style={styles.dateValue}>31-07-2025</Text>
+                                   <Text style={styles.dateLabel}>{t('toDate')}</Text>
+                                   <Text style={styles.dateValue}>{t('datePlaceholder')}</Text>
                                </TouchableOpacity>
                            </View>
                          </View>
                     
 
                          <LabeledInput 
-        label="Nama Cicilan"
-        placeholder="Contoh: Cicilan Motor"
-        value={namaCicilan}
-        onChangeText={setNamaCicilan}
-      />
-      <LabeledInput 
-        label="Total Cicilan"
-        placeholder="Rp"
-        value={formatCurrencyInput(totalCicilan)}
-        onChangeText={(text) => setTotalCicilan(text.replace(/\./g, ''))}
-        keyboardType="numeric"
-      />
-      <LabeledInput 
-        label="Jatuh Tempo"
-        placeholder="Pilih tanggal"
-        value={jatuhTempo}
-        onPress={showDatepicker}
-      />
+       label={t('installmentName')}
+       placeholder={t('installmentName')}
+       value={namaCicilan}
+       onChangeText={setNamaCicilan}
+     />
+     <LabeledInput 
+       label={t('totalAmount')}
+       placeholder="0"
+       value={formatCurrencyInput(totalCicilan)}
+       onChangeText={(text) => setTotalCicilan(text.replace(/\./g, ''))}
+       keyboardType="numeric"
+     />
+     <LabeledInput 
+       label={t('dueDate')}
+       placeholder={t('chooseDate')}
+       value={jatuhTempo}
+       onPress={showDatepicker}
+     />
 
               <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
                 <MaterialCommunityIcons name="content-save-outline" size={22} color="white" style={{marginRight: 10}} />
-                <Text style={styles.saveButtonText}>Simpan</Text>
+                <Text style={styles.saveButtonText}>{t('save')}</Text>
               </TouchableOpacity>
             </View>
           </View>

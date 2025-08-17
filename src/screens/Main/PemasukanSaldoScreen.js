@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useTransactions } from '../../contexts/TransactionsContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 // Komponen Input Kustom
 const LabeledInput = ({ label, placeholder, value, onChangeText, keyboardType = 'default' }) => {
@@ -29,6 +30,7 @@ const LabeledInput = ({ label, placeholder, value, onChangeText, keyboardType = 
 };
 
 const PemasukanSaldoScreen = ({ navigation }) => {
+  const { language, t } = useLanguage();
   const [kategori, setKategori] = useState('');
   const [sumberDana, setSumberDana] = useState('');
   const [jumlah, setJumlah] = useState('');
@@ -57,14 +59,14 @@ const PemasukanSaldoScreen = ({ navigation }) => {
 
   const handleSave = () => {
     if (!kategori || !sumberDana || !jumlah) {
-      Alert.alert('Error', 'Kategori, sumber dana, dan jumlah wajib diisi.');
+      Alert.alert(t('error'), t('requiredFieldsExpenseIncome'));
       return;
     }
 
     const amount = parseFloat(jumlah.replace(/\./g, '').replace(',', '.'));
     
     if (isNaN(amount) || amount <= 0) {
-      Alert.alert('Error', 'Jumlah harus berupa angka yang valid dan lebih dari 0');
+      Alert.alert(t('error'), t('invalidAmount'));
       return;
     }
 
@@ -76,7 +78,7 @@ const PemasukanSaldoScreen = ({ navigation }) => {
       icon: 'cash-plus',
       source: sumberDana,
       date: selectedDate.toISOString().split('T')[0], // YYYY-MM-DD format
-      displayDate: selectedDate.toLocaleDateString('id-ID', {
+      displayDate: selectedDate.toLocaleDateString(language === 'id' ? 'id-ID' : 'en-US', {
         day: '2-digit',
         month: 'long',
         year: 'numeric',
@@ -87,8 +89,8 @@ const PemasukanSaldoScreen = ({ navigation }) => {
 
     addTransaction(newTransaction);
     
-    Alert.alert('Sukses', 'Pemasukan berhasil dicatat.', [
-      { text: 'OK', onPress: () => navigation.goBack() }
+    Alert.alert(t('success'), t('incomeSaved'), [
+      { text: t('ok'), onPress: () => navigation.goBack() }
     ]);
   };
 
@@ -114,10 +116,10 @@ const PemasukanSaldoScreen = ({ navigation }) => {
           <View style={styles.headerContainer}>
             <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
               <MaterialCommunityIcons name="chevron-left" size={32} color="white" />
-              <Text style={styles.backButtonText}>Kembali</Text>
+              <Text style={styles.backButtonText}>{t('back')}</Text>
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Pemasukan Saldo</Text>
-            <Text style={styles.headerSubtitle}>Catat Semua pendapatan yang kamu terima, seperti gaji, bonus, atau sumber lainya</Text>
+            <Text style={styles.headerTitle}>{t('incomeBalanceTitle')}</Text>
+            <Text style={styles.headerSubtitle}>{t('incomeBalanceSubtitle')}</Text>
           </View>
 
           <View style={styles.contentContainer}>
@@ -128,7 +130,7 @@ const PemasukanSaldoScreen = ({ navigation }) => {
                   onPress={() => setShowDatePicker(true)}
                 >
                   <Text style={[styles.dateValue, { color: '#000000' }]}>
-                    {selectedDate.toLocaleDateString('id-ID', {
+                    {selectedDate.toLocaleDateString(language === 'id' ? 'id-ID' : 'en-US', {
                       weekday: 'long',
                       day: '2-digit',
                       month: 'long',
@@ -142,7 +144,7 @@ const PemasukanSaldoScreen = ({ navigation }) => {
                   onPress={() => setShowTimePicker(true)}
                 >
                   <Text style={[styles.timeValue, { color: '#000000' }]}>
-                    {selectedDate.toLocaleTimeString('id-ID', {
+                    {selectedDate.toLocaleTimeString(language === 'id' ? 'id-ID' : 'en-US', {
                       hour: '2-digit',
                       minute: '2-digit'
                     })}
@@ -170,34 +172,35 @@ const PemasukanSaldoScreen = ({ navigation }) => {
               </View>
 
               <LabeledInput 
-                label="Kategori:"
+                label={`${t('category')}`}
                 placeholder="Gaji, Bonus, Lainnya"
                 value={kategori}
                 onChangeText={setKategori}
               />
-              <LabeledInput 
-                label="Sumber Dana"
+             
+                <LabeledInput 
+                label={`${t('sourceOfFunds')}`}
                 placeholder="Gaji, Bonus, Lainnya"
                 value={sumberDana}
                 onChangeText={setSumberDana}
               />
               <LabeledInput 
-                label="Jumlah"
+                label={t('amount')}
                 placeholder="0"
                 value={formatCurrencyInput(jumlah)}
                 onChangeText={(text) => setJumlah(text.replace(/\./g, ''))}
                 keyboardType="numeric"
               />
               <LabeledInput 
-                label="Catatan"
-                placeholder="Tambah catatan (opsional)"
+                label={t('notes')}
+                placeholder={t('addNoteOptional')}
                 value={catatan}
                 onChangeText={setCatatan}
               />
 
               <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
                 <MaterialCommunityIcons name="content-save-outline" size={22} color="white" style={{marginRight: 10}} />
-                <Text style={styles.saveButtonText}>Simpan</Text>
+                <Text style={styles.saveButtonText}>{t('save')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -313,6 +316,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#D0D0D0',
     backgroundColor: '#FFFFFF',
+    marginLeft: 12,
   },
   inputFocused: {
     borderColor: '#005AE0',

@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useLanguage } from '../contexts/LanguageContext';
 
 import TabNavigator from './TabNavigator';
 
@@ -38,6 +39,7 @@ import CicilanDetailScreen from '../screens/Main/CicilanDetailScreen';
 const Stack = createNativeStackNavigator();
 
 const AppNavigator = () => {
+  const { t } = useLanguage();
   return (
     <NavigationContainer>
       {/* Terapkan screenOptions ke semua layar di dalam navigator ini */}
@@ -47,20 +49,20 @@ const AppNavigator = () => {
       >
         {/* GRUP 1: Alur Otentikasi Pengguna */}
         <Stack.Group>
-          <Stack.Screen name="SplashScreen" component={SplashScreen} />
-          <Stack.Screen name="Welcome" component={WelcomeScreen} />
-          <Stack.Screen name="Login" component={LoginScreen} />
-          <Stack.Screen name="Register" component={RegisterScreen} />
-          <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
-          <Stack.Screen name="Verification" component={VerificationScreen} />
-          <Stack.Screen name="CreateNewPassword" component={CreateNewPasswordScreen} />
+          <Stack.Screen name="SplashScreen" component={SplashScreen} options={{ title: ' ' }} />
+          <Stack.Screen name="Welcome" component={WelcomeScreen} options={{ title: t('welcome') }} />
+          <Stack.Screen name="Login" component={LoginScreen} options={{ title: t('login') }} />
+          <Stack.Screen name="Register" component={RegisterScreen} options={{ title: t('register') }} />
+          <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} options={{ title: t('forgotPassword') }} />
+          <Stack.Screen name="Verification" component={VerificationScreen} options={{ title: t('verification') }} />
+          <Stack.Screen name="CreateNewPassword" component={CreateNewPasswordScreen} options={{ title: t('createNewPassword') }} />
         </Stack.Group>
 
         {/* GRUP 2: Layar Feedback/Transisi */}
         <Stack.Group>
-          <Stack.Screen name="SuccessLoginScreen" component={SuccessLoginScreen} />
-          <Stack.Screen name="SuccessRegisScreen" component={SuccessRegisScreen} />
-          <Stack.Screen name="SuccesForgotPassword" component={SuccesForgotPassword} />
+          <Stack.Screen name="SuccessLoginScreen" component={SuccessLoginScreen} options={{ title: t('successLogin') }} />
+          <Stack.Screen name="SuccessRegisScreen" component={SuccessRegisScreen} options={{ title: t('successRegister') }} />
+          <Stack.Screen name="SuccesForgotPassword" component={SuccesForgotPassword} options={{ title: t('successForgotPassword') }} />
           {/* Anda bisa menambahkan layar sukses lainnya di sini jika perlu */}
         </Stack.Group>
 
@@ -68,16 +70,16 @@ const AppNavigator = () => {
         {/* GRUP 3: Alur Aplikasi Utama (Setelah Login) */}
         <Stack.Group>
           <Stack.Screen name="MainTabs" component={TabNavigator} />
-          <Stack.Screen name="TransferSaldo" component={TransferSaldoScreen} />
-          <Stack.Screen name="PengeluaranSaldo" component={PengeluaranSaldoScreen} />
-          <Stack.Screen name="PemasukanSaldo" component={PemasukanSaldoScreen} />
-          <Stack.Screen name="TambahCicilan" component={TambahCicilanScreen} />
-          <Stack.Screen name="TambahTarget" component={TambahTargetScreen} />
+          <Stack.Screen name="TransferSaldo" component={TransferSaldoScreen} options={{ title: t('transfer') }} />
+          <Stack.Screen name="PengeluaranSaldo" component={PengeluaranSaldoScreen} options={{ title: t('expense') }} />
+          <Stack.Screen name="PemasukanSaldo" component={PemasukanSaldoScreen} options={{ title: t('income') }} />
+          <Stack.Screen name="TambahCicilan" component={TambahCicilanScreen} options={{ title: t('addInstallment') }} />
+          <Stack.Screen name="TambahTarget" component={TambahTargetScreen} options={{ title: t('addTarget') }} />
           <Stack.Screen 
             name="UpdateTargetProgress" 
             component={UpdateTargetProgressScreen} 
             options={{ 
-              title: 'Update Progress Target',
+              title: t('updateTargetProgress'),
               headerShown: false
             }} 
           />
@@ -85,11 +87,11 @@ const AppNavigator = () => {
             name="UpdateCicilanProgress" 
             component={UpdateCicilanProgressScreen} 
             options={{ 
-              title: 'Update Pembayaran Cicilan',
+              title: t('updateInstallmentPayment'),
               headerShown: false
             }} 
           />
-          <Stack.Screen name="CicilanDetail" component={CicilanDetailScreen} />
+          <Stack.Screen name="CicilanDetail" component={CicilanDetailScreen} options={{ title: t('installments') }} />
           {/* Layar-layar utama lainnya seperti Profile, Settings, dll. akan masuk di sini */}
         </Stack.Group>
 

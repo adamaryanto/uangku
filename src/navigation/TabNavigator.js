@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native'; // Impor View, Text, StyleSheet
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useLanguage } from '../contexts/LanguageContext';
 
 // Impor HANYA layar yang sudah kita buat
 import HomeScreen from '../screens/Main/HomeScreen';
@@ -22,6 +23,7 @@ const PlaceholderScreen = ({ route }) => {
 const Tab = createBottomTabNavigator();
 
 const TabNavigator = () => {
+  const { t } = useLanguage();
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -55,28 +57,28 @@ const TabNavigator = () => {
       <Tab.Screen 
         name="HomeTab" 
         component={HomeScreen} 
-        options={{ tabBarLabel: 'Home' }} 
+        options={{ tabBarLabel: t('home') }} 
       />
 
       <Tab.Screen 
         name="Target" 
         component={TargetScreen} 
-        options={{ tabBarLabel: 'Target' }} 
+        options={{ tabBarLabel: t('targets') }} 
       />
       <Tab.Screen 
         name="Diagram" 
         component={DiagramScreen} 
-        options={{ tabBarLabel: 'Diagram' }} 
+        options={{ tabBarLabel: t('diagram') }} 
       />
       <Tab.Screen 
         name="Cicilan" 
         component={CicilanScreen} 
-        options={{ tabBarLabel: 'Cicilan' }} 
+        options={{ tabBarLabel: t('installments') }} 
       />
       <Tab.Screen 
         name="Pengaturan" 
         component={PengaturanScreen} 
-        options={{ tabBarLabel: 'Pengaturan' }} 
+        options={{ tabBarLabel: t('settings') }} 
       />
     </Tab.Navigator>
   );

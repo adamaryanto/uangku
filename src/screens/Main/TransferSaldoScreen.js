@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTransactions } from '../../contexts/TransactionsContext';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 // Komponen Input Kustom
 const LabeledInput = ({ label, placeholder, value, onChangeText, keyboardType = 'default' }) => {
@@ -30,6 +31,7 @@ const LabeledInput = ({ label, placeholder, value, onChangeText, keyboardType = 
 
 const TransferSaldoScreen = ({ navigation }) => {
   const { addTransaction } = useTransactions();
+  const { language, t } = useLanguage();
   const [sumberDana, setSumberDana] = useState('');
   const [tujuan, setTujuan] = useState('');
   const [jumlah, setJumlah] = useState('');
@@ -54,8 +56,10 @@ const TransferSaldoScreen = ({ navigation }) => {
     setShowTimePicker(false);
   };
 
+  const locale = language === 'id' ? 'id-ID' : 'en-US';
+
   const formatDate = (date) => {
-    return date.toLocaleDateString('id-ID', {
+    return date.toLocaleDateString(locale, {
       day: '2-digit',
       month: 'long',
       year: 'numeric'
@@ -63,7 +67,7 @@ const TransferSaldoScreen = ({ navigation }) => {
   };
 
   const formatTime = (date) => {
-    return date.toLocaleTimeString('id-ID', {
+    return date.toLocaleTimeString(locale, {
       hour: '2-digit',
       minute: '2-digit'
     });
@@ -71,13 +75,13 @@ const TransferSaldoScreen = ({ navigation }) => {
 
   const handleSave = () => {
     if (!sumberDana || !tujuan || !jumlah) {
-      Alert.alert('Error', 'Sumber dana, tujuan, dan jumlah wajib diisi.');
+      Alert.alert(t('error'), t('requiredFieldsTransfer'));
       return;
     }
 
     const amount = parseFloat(jumlah.replace(/\./g, '').replace(',', '.'));
     if (isNaN(amount) || amount <= 0) {
-      Alert.alert('Error', 'Jumlah transfer tidak valid');
+      Alert.alert(t('error'), t('invalidAmount'));
       return;
     }
 
@@ -87,10 +91,10 @@ const TransferSaldoScreen = ({ navigation }) => {
       from: sumberDana,
       to: tujuan,
       amount: amount,
-      description: catatan || `Transfer dari ${sumberDana} ke ${tujuan}`,
+      description: catatan || `Transfer ${sumberDana} -> ${tujuan}`,
       category: 'Transfer',
       date: selectedDate.toISOString().split('T')[0],
-      displayDate: selectedDate.toLocaleDateString('id-ID', {
+      displayDate: selectedDate.toLocaleDateString(locale, {
         day: '2-digit',
         month: 'long',
         year: 'numeric',
@@ -100,8 +104,8 @@ const TransferSaldoScreen = ({ navigation }) => {
     });
 
     // Show success message and navigate back
-    Alert.alert('Sukses', 'Transfer saldo berhasil dicatat.', [
-      { text: 'OK', onPress: () => navigation.goBack() }
+    Alert.alert(t('success'), t('transferSaved'), [
+      { text: t('ok'), onPress: () => navigation.goBack() }
     ]);
   };
 
@@ -127,12 +131,12 @@ const TransferSaldoScreen = ({ navigation }) => {
                 {/* Header sekarang adalah View transparan di dalam ScrollView */}
                 <View style={styles.headerContainer}>
                     <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-                        <MaterialCommunityIcons name="chevron-left" size={32} color="white" />
-                        <Text style={styles.backButtonText}>Kembali</Text>
+                      <MaterialCommunityIcons name="chevron-left" size={32} color="white" />
+                      <Text style={styles.backButtonText}>{t('back')}</Text>
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Transfer Saldo</Text>
-                    <Text style={styles.headerSubtitle}>Catat semua perpindahan dana antar rekening atau sumber dana yang kamu miliki.</Text>
-                </View>
+                    <Text style={styles.headerTitle}>{t('transferBalanceTitle')}</Text>
+                    <Text style={styles.headerSubtitle}>{t('transferBalanceSubtitle')}</Text>
+                  </View>
 
                 {/* Konten form */}
                 <View style={styles.contentContainer}>
@@ -143,7 +147,7 @@ const TransferSaldoScreen = ({ navigation }) => {
                               onPress={() => setShowDatePicker(true)}
                             >
                                 <Text style={[styles.dateValue, { color: '#000000' }]}>
-                                  {selectedDate.toLocaleDateString('id-ID', {
+                                  {selectedDate.toLocaleDateString(locale, {
                                     weekday: 'long',
                                     day: '2-digit',
                                     month: 'long',
@@ -156,9 +160,7 @@ const TransferSaldoScreen = ({ navigation }) => {
                               style={styles.timePicker}
                               onPress={() => setShowTimePicker(true)}
                             >
-                                <Text style={[styles.timeValue, { color: '#000000' }]}>
-                                  {formatTime(selectedDate)}
-                                </Text>
+                                <Text style={[styles.timeValue, { color: '#000000' }]}>{formatTime(selectedDate)}</Text>
                             </TouchableOpacity>
 
                             {showDatePicker && (
@@ -182,34 +184,34 @@ const TransferSaldoScreen = ({ navigation }) => {
                         </View>
 
                         <LabeledInput 
-                            label="Sumber dana:"
+                            label={`${t('sourceOfFunds')}`}
                             placeholder="Uang Tunai, Bank"
                             value={sumberDana}
                             onChangeText={setSumberDana}
                         />
                         <LabeledInput 
-                            label="Tujuan"
+                            label={t('destination')}
                             placeholder="Uang Tunai, Bank"
                             value={tujuan}
                             onChangeText={setTujuan}
                         />
                         <LabeledInput 
-                            label="Jumlah"
+                            label={t('amount')}
                             placeholder="0"
                             value={formatCurrencyInput(jumlah)}
                             onChangeText={(text) => setJumlah(text.replace(/\./g, ''))}
                             keyboardType="numeric"
                         />
                         <LabeledInput 
-                            label="Catatan"
-                            placeholder="Tambah catatan (opsional)"
+                            label={t('notes')}
+                            placeholder={t('addNoteOptional')}
                             value={catatan}
                             onChangeText={setCatatan}
                         />
 
                         <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
                             <MaterialCommunityIcons name="content-save-outline" size={22} color="white" style={{marginRight: 10}} />
-                            <Text style={styles.saveButtonText}>Simpan</Text>
+                            <Text style={styles.saveButtonText}>{t('save')}</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -324,6 +326,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#D0D0D0',
     backgroundColor: '#FFFFFF',
+    marginLeft: 12,
   },
   saveButton: {
     flexDirection: 'row',

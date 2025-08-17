@@ -5,6 +5,7 @@ import { PieChart } from 'react-native-chart-kit';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useTransactions } from '../../contexts/TransactionsContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -43,8 +44,8 @@ const formatDate = (date) => {
 };
 
 // Format tanggal untuk display
-const formatDisplayDate = (date) => {
-  return date.toLocaleDateString('id-ID', {
+const formatDisplayDate = (date, language) => {
+  return date.toLocaleDateString(language === 'id' ? 'id-ID' : 'en-US', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric'
@@ -52,6 +53,7 @@ const formatDisplayDate = (date) => {
 };
 
 const DiagramScreen = ({ navigation }) => {
+  const { language, t } = useLanguage();
   const { transactions, getTotalBalance, getTotalIncome, getTotalExpense } = useTransactions();
   const [startDate, setStartDate] = useState(new Date());
   const [endDate, setEndDate] = useState(new Date());
@@ -91,8 +93,13 @@ const DiagramScreen = ({ navigation }) => {
       .filter(([_, amount]) => amount > 0) // Only include types with amount > 0
       .map(([type, amount]) => {
         const percentage = total > 0 ? Math.round((amount / total) * 100) : 0;
+        const typeName =
+          type === 'Pemasukan' ? t('moneyIn') :
+          type === 'Pengeluaran' ? t('moneyOut') :
+          type === 'Target' ? t('target') :
+          type === 'Cicilan' ? t('installmentsLabel') : type;
         return {
-          name: `${type} (${percentage}%)`,
+          name: `${typeName} (${percentage}%)`,
           population: amount,
           color: typeColors[type] || '#7F8C8D',
           legendFontColor: '#7F7F7F',
@@ -126,7 +133,7 @@ const DiagramScreen = ({ navigation }) => {
   };
 
   const handleDownloadPdf = () => {
-    Alert.alert('Download PDF', 'Fitur untuk mengunduh laporan PDF akan segera hadir!');
+    Alert.alert(t('exportPdf'), 'Fitur untuk mengunduh laporan PDF akan segera hadir!');
   };
 
   const Legend = () => (
@@ -151,9 +158,9 @@ const DiagramScreen = ({ navigation }) => {
           style={styles.headerContainer}
           imageStyle={{ borderBottomLeftRadius: 25, borderBottomRightRadius: 25 }}
         >
-          <Text style={styles.headerTitle}>Analisis Keuangan</Text>
+          <Text style={styles.headerTitle}>{t('financialAnalysisTitle')}</Text>
           <Text style={styles.headerSubtitle}>
-            Tinjau Pola Pengeluaran dan Pemasukan secara grafis
+            {t('financialAnalysisSubtitle')}
           </Text>
         </ImageBackground>
 
@@ -161,9 +168,9 @@ const DiagramScreen = ({ navigation }) => {
           {/* Card untuk Periode Transaksi */}
           <View style={styles.card}>
             <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>Periode Transaksi :</Text>
+              <Text style={styles.cardTitle}>{t('transactionPeriod')}</Text>
               <TouchableOpacity style={styles.downloadButton} onPress={handleDownloadPdf}>
-                <Text style={styles.downloadButtonText}>Export Pdf</Text>
+                <Text style={styles.downloadButtonText}>{t('exportPdf')}</Text>
               </TouchableOpacity>
             </View>
             <View style={styles.dateContainer}>
@@ -171,15 +178,15 @@ const DiagramScreen = ({ navigation }) => {
                 style={styles.datePicker}
                 onPress={() => setShowStartDatePicker(true)}
               >
-                <Text style={styles.dateLabel}>Dari tanggal :</Text>
-                <Text style={styles.dateValue}>{formatDisplayDate(startDate)}</Text>
+                <Text style={styles.dateLabel}>{t('fromDate')}</Text>
+                <Text style={styles.dateValue}>{formatDisplayDate(startDate, language)}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.datePickerEnd}
                 onPress={() => setShowEndDatePicker(true)}
               >
-                <Text style={[styles.dateLabel, { textAlign: 'right' }]}>Sampai tanggal :</Text>
-                <Text style={[styles.dateValue, { textAlign: 'right' }]}>{formatDisplayDate(endDate)}</Text>
+                <Text style={[styles.dateLabel, { textAlign: 'right' }]}>{t('toDate')}</Text>
+                <Text style={[styles.dateValue, { textAlign: 'right' }]}>{formatDisplayDate(endDate, language)}</Text>
               </TouchableOpacity>
             </View>
 
@@ -207,7 +214,7 @@ const DiagramScreen = ({ navigation }) => {
 
           {/* Card untuk Chart */}
           <View style={[styles.card, styles.chartCard]}>
-            <Text style={styles.sectionTitle}>Ringkasan Pengeluaran</Text>
+            <Text style={styles.sectionTitle}>{t('expenseSummary')}</Text>
             {chartData.length > 0 ? (
               <>
                 <View style={{ width: '100%', alignItems: 'center'}}>
@@ -227,31 +234,29 @@ const DiagramScreen = ({ navigation }) => {
             ) : (
               <View style={styles.emptyState}>
                 <MaterialCommunityIcons name="chart-pie" size={50} color="#DDD" />
-                <Text style={styles.emptyStateText}>
-                  Tidak ada data pengeluaran untuk periode ini
-                </Text>
+                <Text style={styles.emptyStateText}>{t('noDataForPeriod')}</Text>
               </View>
             )}
           </View>
 
           {/* Card untuk Total Dana Keseluruhan */}
           <View style={styles.card}>
-            <Text style={styles.totalLabel}>Total dana keseluruhan :</Text>
+            <Text style={styles.totalLabel}>{t('totalOverallFunds')}</Text>
             <Text style={styles.totalAmount}>{formatCurrency(getTotalBalance())}</Text>
           </View>
 
           {/* Card untuk Detail */}
           <View style={styles.card}>
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Total Pemasukan :</Text>
+              <Text style={styles.detailLabel}>{t('totalIncomeLabel')}</Text>
               <Text style={[styles.detailAmount, { color: '#27AE60' }]}>{formatCurrency(getTotalIncome())}</Text>
             </View>
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Total Pengeluaran :</Text>
+              <Text style={styles.detailLabel}>{t('totalExpenseLabel')}</Text>
               <Text style={[styles.detailAmount, { color: '#E74C3C' }]}>{formatCurrency(getTotalExpense())}</Text>
             </View>
             <View style={[styles.detailRow, { borderBottomWidth: 0 }]}>
-              <Text style={styles.detailLabel}>Saldo :</Text>
+              <Text style={styles.detailLabel}>{t('balanceLabel')}</Text>
               <Text style={styles.detailAmount}>{formatCurrency(getTotalBalance())}</Text>
             </View>
           </View>

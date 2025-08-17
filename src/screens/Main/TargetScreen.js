@@ -7,13 +7,13 @@ import {
   ScrollView,
   TouchableOpacity,
   ImageBackground,
-  Modal, Pressable 
+  Modal,
+  Pressable 
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTransactions } from '../../contexts/TransactionsContext';
-
-// Data target
+import { useLanguage } from '../../contexts/LanguageContext';
 
 // Format angka jadi Rupiah
 const formatCurrency = (number) => {
@@ -25,35 +25,68 @@ const formatCurrency = (number) => {
 };
 
 // Komponen progress bar
+const ProgressBar = ({ progress }) => {
+  const isComplete = progress >= 100;
+  return (
+    <View style={styles.progressBarBackground}>
+      <View 
+        style={[
+          styles.progressBarFill, 
+          { 
+            width: `${progress}%`,
+            backgroundColor: isComplete ? '#00C7AF' : '#FEB01A'
+          }
+        ]} 
+      />
+    </View>
+  );
+};
 
-const TargetScreen = ({navigation}) => {
-  const ProgressBar = ({ progress }) => {
-    const isComplete = progress >= 100;
-    return (
-      <View style={styles.progressBarBackground}>
-        <View 
-          style={[
-            styles.progressBarFill, 
-            { 
-              width: `${progress}%`,
-              backgroundColor: isComplete ? '#00C7AF' : '#FEB01A'
-            }
-          ]} 
-        />
-      </View>
-    );
-  };
-  const [showAllTargets, setShowAllTargets] = React.useState(false);
+const TargetScreen = ({ navigation }) => {
+  const { language, t } = useLanguage();
+  const [showAllTargets, setShowAllTargets] = useState(false);
   const [isMenuVisible, setIsMenuVisible] = useState(false);
   
-
   const { transactions, getTotalTargetAmount, getTotalSavedAmount } = useTransactions(); 
+  
+  // Helper: format value to DD-MM-YYYY if possible
+  const toDDMMYYYY = (value) => {
+    if (!value) return null;
+    if (typeof value === 'string') {
+      // already DD-MM-YYYY
+      if (/^\d{2}-\d{2}-\d{4}$/.test(value)) return value;
+      const parts = value.split(/[-\/]/);
+      if (parts.length === 3) {
+        // YYYY-MM-DD
+        if (parts[0].length === 4) {
+          const [y, m, d] = parts;
+          return `${String(d).padStart(2, '0')}-${String(m).padStart(2, '0')}-${y}`;
+        }
+        // DD-MM-YYYY (normalize zero padding)
+        if (parts[2].length === 4) {
+          const [d, m, y] = parts;
+          return `${String(d).padStart(2, '0')}-${String(m).padStart(2, '0')}-${y}`;
+        }
+      }
+    }
+    try {
+      const dt = new Date(value);
+      if (!isNaN(dt)) {
+        const d = String(dt.getDate()).padStart(2, '0');
+        const m = String(dt.getMonth() + 1).padStart(2, '0');
+        const y = dt.getFullYear();
+        return `${d}-${m}-${y}`;
+      }
+    } catch (e) {}
+    return null;
+  };
   
   // Filter transactions to get only targets
   const targets = transactions.filter(t => t.type === 'Target');
   const targetsToShow = showAllTargets ? targets : targets.slice(0, 3);
   const totalTarget = getTotalTargetAmount();
   const totalSaved = getTotalSavedAmount();
+  
   // Calculate remaining target by summing up remaining amounts for each target
   const remainingTarget = targets.reduce((total, target) => {
     const remaining = Math.max(0, target.targetAmount - (target.savedAmount || 0));
@@ -63,239 +96,220 @@ const TargetScreen = ({navigation}) => {
   // Count completed and pending targets
   const completedTargets = targets.filter(t => t.savedAmount >= t.targetAmount).length;
   const pendingTargets = targets.length - completedTargets;
-  const renderTargetItem = ({ item }) => {
-    const progress = (item.savedAmount / item.targetAmount) * 100;
-    const remainingAmount = Math.max(0, item.targetAmount - item.savedAmount);
-    
-    return (
-      <View style={styles.targetItemCard}>
-        <View style={styles.targetItemHeader}>
-          <View style={styles.targetIconContainer}>
-            <MaterialCommunityIcons name="bullseye-arrow" size={24} color="#005AE0" />
-          </View>
-          <View style={styles.targetItemDetails}>
-            <Text style={styles.targetItemName}>{item.name}</Text>
-            <Text style={styles.targetItemSaved}>Terkumpul: {formatCurrency(item.savedAmount)}</Text>
-            <Text style={styles.targetItemRemaining}>Sisa: {formatCurrency(remainingAmount)}</Text>
-          </View>
-          <View style={styles.targetItemAmountContainer}>
-            <Text style={styles.targetItemTarget}>Target: {formatCurrency(item.targetAmount)}</Text>
-            <Text style={styles.targetItemDate}>Selesai: {item.date}</Text>
-          </View>
-        </View>
-        <View style={styles.targetItemAmountContainer}>
-          <Text style={styles.targetItemTarget}>Target: {formatCurrency(item.targetAmount)}</Text>
-          <View style={styles.rightAlignedRow}>
-            <Text style={styles.targetItemDate}>Selesai: {item.date}</Text>
-            <TouchableOpacity 
-              onPress={() => navigation.navigate('UpdateTargetProgress', { target: item })}
-              style={styles.chevronButton}
-            >
-              <MaterialCommunityIcons name="chevron-right" size={24} color="#666" />
-            </TouchableOpacity>
-          </View>
-        </View>
-        <View style={styles.progressContainer}>
-          <Text style={styles.progressText}>{Math.min(100, Math.floor(progress))}%</Text>
-          <ProgressBar progress={progress} />
-          <Text style={styles.progressText}>100%</Text>
-        </View>
-      </View>
-    );
-  };
   
-    const handleNavigate = (screenName) => {
+  const handleNavigate = (screenName) => {
     setIsMenuVisible(false);
     navigation.navigate(screenName);
   };
+  
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
 
-      <ScrollView>
+      <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
         <ImageBackground
           source={require('../../assets/image.png')}
           style={styles.headerContainer}
           imageStyle={{ borderBottomLeftRadius: 25, borderBottomRightRadius: 25 }}
         >
-          <Text style={styles.headerTitle}>Tujuan Keuangan Anda</Text>
+          <Text style={styles.headerTitle}>{t('yourFinancialGoals')}</Text>
           <Text style={styles.headerSubtitle}>
-            Atur dan pantau perkembangan target keuangan Anda.
+            {t('manageAndTrackTargets')}
           </Text>
         </ImageBackground>
 
         {/* Konten */}
-        <View style={styles.contentContainer} showsVerticalScrollIndicator={false}>
+        <View style={styles.contentContainer}>
           {/* Filter */}
           <View style={styles.filterContainer}>
             <TouchableOpacity style={[styles.filterButton, { backgroundColor: '#FEB01A' }]}>
-                <Text style={styles.filterButtonText}>
-                  Target{'\n'}
-                  <Text style={styles.filterButtonCount}>{targets.length}</Text>
+              <View style={styles.filterButtonTextWrap}>
+                <Text
+                  style={styles.filterButtonLabel}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.8}
+                >
+                  {t('targetsLabel')}
                 </Text>
+                <Text style={styles.filterButtonCount}>{targets.length}</Text>
+              </View>
             </TouchableOpacity>
 
             <TouchableOpacity style={[styles.filterButton, { backgroundColor: '#FF4560' }]}>
-              <Text style={styles.filterButtonText}>
-                Belum Target{'\n'}
+              <View style={styles.filterButtonTextWrap}>
+                <Text
+                  style={styles.filterButtonLabel}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.8}
+                >
+                  {t('notYetTargets')}
+                </Text>
                 <Text style={styles.filterButtonCount}>{pendingTargets}</Text>
-              </Text>
+              </View>
             </TouchableOpacity>
 
             <TouchableOpacity style={[styles.filterButton, { backgroundColor: '#00C7AF' }]}>
-              <Text style={styles.filterButtonText}>
-                Sudah Target{'\n'}
+              <View style={styles.filterButtonTextWrap}>
+                <Text
+                  style={styles.filterButtonLabel}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.8}
+                >
+                  {t('completedTargets')}
+                </Text>
                 <Text style={styles.filterButtonCount}>{completedTargets}</Text>
-              </Text>
+              </View>
             </TouchableOpacity>
           </View>
 
           {/* Total dana target */}
-          <View style={styles.totalTargetCard}>
-            <Text style={styles.totalTargetLabel}>Total dana target :</Text>
-            <Text style={styles.totalTargetAmount}>{formatCurrency(totalTarget)}</Text>
+          <View style={styles.totalAmountCard}>
+            <Text style={styles.totalAmountLabel}>{t('totalTargetFundsLabel')}</Text>
+            <Text style={styles.totalAmountValue}>{formatCurrency(totalTarget)}</Text>
           </View>
 
           {/* Summary */}
-          <View style={styles.summaryCardContainer}>
+          <View style={styles.summaryContainer}>
             <View style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>Target terpenuhi :</Text>
-              <Text style={[styles.summaryAmount, { color: '#FEB01A' }]}>
+              <Text style={styles.summaryLabel}>{t('targetFulfilled')}</Text>
+              <Text style={[styles.summaryAmount, { color: '#FEB01A' }]}> 
                 +{formatCurrency(totalSaved)}
               </Text>
             </View>
             <View style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>Sisa dana target :</Text>
-              <Text style={[styles.summaryAmount, { color: '#E63950' }]}>
+              <Text style={styles.summaryLabel}>{t('remainingTargetFunds')}</Text>
+              <Text style={[styles.summaryAmount, { color: '#E63950' }]}> 
                 -{formatCurrency(remainingTarget)}
               </Text>
             </View>
           </View>
 
           {/* List Target */}
-        <View style={styles.allTargetsCard}>
-
-          {/* Cek apakah ada data target */}
-          {targets.length > 0 ? (
-            <>
-            <Text style={styles.targetListTitle}>Target Anda :</Text>
-              {targetsToShow.map((item) => {
-                const progress = Math.min(100, (item.savedAmount / item.targetAmount) * 100);
-                const remainingAmount = Math.max(0, item.targetAmount - item.savedAmount);
-                return (
-                  <View key={item.id} style={styles.targetItemRow}>
-                    {/* ... (kode untuk render setiap item target tetap sama) ... */}
-                    <View style={styles.targetItemHeader}>
-                      <View style={styles.targetIconContainer}>
-                        <MaterialCommunityIcons name="briefcase-outline" size={24} color="#005AE0" />
+          <View style={styles.itemsCard}>
+            {/* Cek apakah ada data target */}
+            {targets.length > 0 ? (
+              <>
+                <Text style={styles.itemsTitle}>{t('yourTargets')}</Text>
+                {targetsToShow.map((item) => {
+                  const progress = Math.min(100, (item.savedAmount / item.targetAmount) * 100);
+                  const remainingAmount = Math.max(0, item.targetAmount - item.savedAmount);
+                  const isCompleted = (item.savedAmount || 0) >= (item.targetAmount || 0);
+                  const endDateLabel = toDDMMYYYY(item?.date) || toDDMMYYYY(item?.targetDate);
+                  
+                  return (
+                    <View key={item.id} style={styles.itemRow}>
+                      <View style={styles.itemHeader}>
+                        <View style={styles.iconContainer}>
+                          <MaterialCommunityIcons name="briefcase-outline" size={24} color="#005AE0" />
+                        </View>
+                        <View style={styles.itemDetails}>
+                          <Text style={styles.itemName}>{item.name}</Text>
+                          <Text style={styles.itemCollected}>{t('collected')}: {formatCurrency(item.savedAmount)}</Text>
+                          <Text style={styles.itemRemaining}>{t('remaining')}: {formatCurrency(remainingAmount)}</Text>
+                        </View>
+                        <View style={styles.itemAmountContainer}>
+                          <Text style={styles.itemTarget}>{t('target')}: {formatCurrency(item.targetAmount)}</Text>
+                          <Text style={styles.itemDate}>{t('dueDate2')}: {endDateLabel || '-'}</Text>
+                        </View>
                       </View>
-                      <View style={styles.targetItemDetails}>
-                        <Text style={styles.targetItemName}>{item.name}</Text>
-                        <Text style={styles.targetItemSaved}>Terkumpul: {formatCurrency(item.savedAmount)}</Text>
-                        <Text style={styles.targetItemRemaining}>Sisa: {formatCurrency(remainingAmount)}</Text>
+                      <View style={styles.itemAmountContainer}>
+                        <View style={styles.rightAlignedRow}>
+                          <Text style={[styles.itemDate, { color: isCompleted ? '#27AE60' : '#E74C3C' }]}>
+                            {isCompleted ? t('paidOff') : t('notPaidOff')}
+                          </Text>
+                          <TouchableOpacity 
+                            onPress={() => navigation.navigate('UpdateTargetProgress', { target: item })}
+                            style={styles.chevronButton}
+                          >
+                            <MaterialCommunityIcons name="chevron-right" size={24} color="#666" />
+                          </TouchableOpacity>
+                        </View>
                       </View>
-                      <View style={styles.targetItemAmountContainer}>
-                        <Text style={styles.targetItemTarget}>Target: {formatCurrency(item.targetAmount)}</Text>
-                        <Text style={styles.targetItemDate}>
-                          {item.targetDate ? `Target: ${new Date(item.targetDate).toLocaleDateString('id-ID')}` : ''}
-                        </Text>
+                      <View style={styles.progressContainer}>
+                        <Text style={styles.progressText}>{Math.floor(progress)}%</Text>
+                        <ProgressBar progress={progress} />
+                        <Text style={styles.progressText}>100%</Text>
                       </View>
                     </View>
-                    <View style={styles.targetItemAmountContainer}>
-                      <View style={styles.rightAlignedRow}>
-                        <Text style={styles.targetItemDate}>Selesai: {item.date}</Text>
-                        <TouchableOpacity 
-                          onPress={() => navigation.navigate('UpdateTargetProgress', { target: item })}
-                          style={styles.chevronButton}
-                        >
-                          <MaterialCommunityIcons name="chevron-right" size={24} color="#666" />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                    <View style={styles.progressContainer}>
-                      <Text style={styles.progressText}>{Math.floor(progress)}%</Text>
-                      <ProgressBar progress={progress} />
-                      <Text style={styles.progressText}>100%</Text>
-                    </View>
-                  </View>
-                );
-              })}
+                  );
+                })}
 
-              {/* Tombol Lihat Lainnya */}
-              {targets.length > 3 && !showAllTargets && (
-                <TouchableOpacity
-                  style={styles.seeMoreButton}
-                  onPress={() => setShowAllTargets(true)}
-                >
-                  <Text style={styles.seeMoreText}>Lihat Lainnya</Text>
-                </TouchableOpacity>
-              )}
+                {/* Tombol Lihat Lainnya */}
+                {targets.length > 3 && !showAllTargets && (
+                  <TouchableOpacity
+                    style={styles.seeMoreButton}
+                    onPress={() => setShowAllTargets(true)}
+                  >
+                    <Text style={styles.seeMoreText}>{t('seeMore')}</Text>
+                  </TouchableOpacity>
+                )}
 
-              {showAllTargets && (
-                <TouchableOpacity
-                  style={styles.seeMoreButton}
-                  onPress={() => setShowAllTargets(false)}
-                >
-                  <Text style={styles.seeMoreText}>Tampilkan Lebih Sedikit</Text>
-                </TouchableOpacity>
-              )}
-            </>
-          ) : (
-            // Jika TIDAK ADA target, tampilkan pesan ini
-            <View style={styles.noTargets}>
-              <MaterialCommunityIcons name="bullseye-arrow" size={48} color="#A9A9A9" />
-              <Text style={styles.noTargetsText}>Belum Ada Target</Text>
-              <Text style={styles.noTargetsSubtext}>Buat target keuangan pertama Anda</Text>
-            </View>
-          )}
-        </View>
+                {showAllTargets && targets.length > 3 && (
+                  <TouchableOpacity
+                    style={styles.seeMoreButton}
+                    onPress={() => setShowAllTargets(false)}
+                  >
+                    <Text style={styles.seeMoreText}>{t('seeLess')}</Text>
+                  </TouchableOpacity>
+                )}
+              </>
+            ) : (
+              // Jika TIDAK ADA target, tampilkan pesan ini
+              <View style={styles.noItems}>
+                <MaterialCommunityIcons name="bullseye-arrow" size={48} color="#A9A9A9" />
+                <Text style={styles.noItemsText}>{t('noTargetsYet')}</Text>
+                <Text style={styles.noItemsSubtext}>{t('createFirstTarget')}</Text>
+              </View>
+            )}
+          </View>
         </View>
       </ScrollView>
       
-      <TouchableOpacity style={styles.fab} onPress={() => setIsMenuVisible(true)}>
-              <MaterialCommunityIcons name="plus" size={32} color="#FEB019" />
-            </TouchableOpacity>
-            <Modal
-              animationType="fade"
-              transparent={true}
-              visible={isMenuVisible}
-              onRequestClose={() => setIsMenuVisible(false)}
-            >
-              <Pressable style={styles.modalOverlay} onPress={() => setIsMenuVisible(false)}>
-                <View style={styles.menuContainer}>
-                  {/* Tombol Aksi */}
-                  <View style={styles.actionRow}>
-                    <Text style={[styles.actionLabel,{backgroundColor: '#727272'}]}>Riwayat Target</Text>
-                    <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#727272'}]}>
-                      <MaterialCommunityIcons name="history" size={24} color="white" />
-                    </TouchableOpacity>
-                  </View>
-              
-                  <View style={styles.actionRow}>
-                  <Text 
-                    style={[styles.actionLabel,{backgroundColor: '#00C7AF'}]} 
-                    
-                  >
-                    Tambah Target Baru
-                  </Text>
-
-                    <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#00C7AF'}]} onPress={() => handleNavigate('TambahTarget')}  >
-                      {/* Ikon diubah menjadi pensil */}
-                      <MaterialCommunityIcons name="pencil-plus-outline" size={24} color="white" />
-                    </TouchableOpacity>
-                  </View>
-                  
-                  {/* Tombol Tutup */}
-                  <TouchableOpacity style={styles.closeButton} onPress={() => setIsMenuVisible(false)}>
-                    <MaterialCommunityIcons name="close" size={32} color="#005AE0" />
-                  </TouchableOpacity>
-                </View>
-              </Pressable>
-            </Modal>
-
       {/* Floating Button */}
+      <TouchableOpacity style={styles.fab} onPress={() => setIsMenuVisible(true)}>
+        <MaterialCommunityIcons name="plus" size={32} color="#FEB019" />
+      </TouchableOpacity>
       
+      {/* Modal Menu */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={isMenuVisible}
+        onRequestClose={() => setIsMenuVisible(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setIsMenuVisible(false)}>
+          <View style={styles.menuContainer}>
+            {/* Tombol Aksi */}
+            <View style={styles.actionRow}>
+              <Text style={[styles.actionLabel, { backgroundColor: '#727272' }]}>{t('targetHistory')}</Text>
+              <TouchableOpacity style={[styles.actionButton, { backgroundColor: '#727272' }]}>
+                <MaterialCommunityIcons name="history" size={24} color="white" />
+              </TouchableOpacity>
+            </View>
+        
+            <View style={styles.actionRow}>
+              <Text style={[styles.actionLabel, { backgroundColor: '#00C7AF' }]}>
+                {t('addNewTarget')}
+              </Text>
+              <TouchableOpacity 
+                style={[styles.actionButton, { backgroundColor: '#00C7AF' }]} 
+                onPress={() => handleNavigate('TambahTarget')}
+              >
+                <MaterialCommunityIcons name="pencil-plus-outline" size={24} color="white" />
+              </TouchableOpacity>
+            </View>
+            
+            {/* Tombol Tutup */}
+            <TouchableOpacity style={styles.closeButton} onPress={() => setIsMenuVisible(false)}>
+              <MaterialCommunityIcons name="close" size={32} color="#005AE0" />
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -313,13 +327,13 @@ const styles = StyleSheet.create({
     paddingBottom: 180,  
   },
   headerTitle: {
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: 'bold',
     color: 'white',
   },
   headerSubtitle: {
-    fontSize: 15,
-    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.8)',
     marginTop: 5,
   },
   contentContainer: {
@@ -327,55 +341,54 @@ const styles = StyleSheet.create({
     marginTop: -130,    
     paddingHorizontal: 20,
   },
-
   filterContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 10,
-    
     borderRadius: 6,
   },
-    filterButton: {
-    flexDirection: 'row', 
+  filterButton: {
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 8, 
-    paddingHorizontal: 10, 
+    padding: 10,
     borderRadius: 5,
-    width: '32%',
+    width: '31%',
   },
-  filterButtonText: {
+  filterButtonTextWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filterButtonLabel: {
     color: 'white',
-    fontSize: 13, 
+    fontSize: 13,
     fontWeight: 'bold',
-    marginBottom:5,
-    
     textAlign: 'center',
   },
   filterButtonCount: {
-   fontSize: 17,
+    fontSize: 17,
     fontWeight: 'bold',
     color: 'white'
   },
-  totalTargetCard: {
+  
+  totalAmountCard: {
     backgroundColor: 'white',
     borderRadius: 6,
     padding: 15,
-    marginTop:5,
-    alignItems: 'start',
+    marginTop: 5,
+    alignItems: 'flex-start',
   },
-  totalTargetLabel: {
+  totalAmountLabel: {
     fontSize: 16,
     color: 'black',
-    fontWeight:'bold',
+    fontWeight: 'bold',
   },
-  totalTargetAmount: {
+  totalAmountValue: {
     fontSize: 32,
     fontWeight: 'bold',
     color: '#005AE0',
     marginTop: 5,
   },
-  summaryCardContainer: {
+  summaryContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 15,
@@ -384,7 +397,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 6,
     padding: 10,
-    
     width: '48%',
     elevation: 2,
     shadowColor: '#000',
@@ -402,68 +414,83 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: 'bold',
   },
-  targetListTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginTop: 25,
-    marginBottom: 15,
-  },
-  targetItemCard: {
-    backgroundColor: '#FFFFFF',
+  itemsCard: {
+    backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    marginBottom: 20,
+    marginTop: 16,
+    elevation: 3, 
   },
-  targetItemHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  targetIconContainer: {
-    backgroundColor: '#E8F0FE',
-    borderRadius: 10,
-    width: 45,
-    height: 45,
+  noItems: {
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 15,
+    paddingVertical: 40,  
+    paddingHorizontal: 20,
   },
-  targetItemDetails: {
+  noItemsText: {
+    fontSize: 18,
+    color: '#333',
+    fontWeight: 'bold',
+    marginTop: 15,  
+    marginBottom: 10,
+  },
+  noItemsSubtext: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+  },
+  itemsTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#111',
+    marginBottom: 10,
+  },
+  itemRow: {
+    marginBottom: 16,
+    paddingBottom: 12,
+  },
+  itemHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 14,
+    justifyContent: 'space-between',
+  },
+  iconContainer: {
+    backgroundColor: '#EAF2FF',
+    padding: 8,
+    borderRadius: 8,
+    marginRight: 10,
+  },
+  itemDetails: {
     flex: 1,
   },
-  targetItemName: {
+  itemName: {
     fontSize: 14,
     fontWeight: 'bold',
     color: '#333',
   },
-  targetItemSaved: {
+  itemCollected: {
     fontSize: 13,
-    color: '#005AE0',
-    fontWeight: '500',
-    marginTop: 2,
+    color: 'orange',
   },
-  targetItemRemaining: {
+  itemRemaining: {
     fontSize: 13,
     color: '#E63950',
     fontWeight: '500',
     marginTop: 2,
   },
-  targetItemAmountContainer: {
+  itemAmountContainer: {
     alignItems: 'flex-end',
   },
-  targetItemTarget: {
-    fontSize: 16,
+  itemTarget: {
+    fontSize: 13,
     fontWeight: 'bold',
-    color: '#E74C3C',
+    color: '#E63950',
   },
-  targetItemDate: {
-    fontSize: 12,
-    color: '#999',
+  itemDate: {
+    fontSize: 11,
+    color: '#888',
   },
   rightAlignedRow: {
     flexDirection: 'row',
@@ -475,123 +502,13 @@ const styles = StyleSheet.create({
   progressContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 10,
-  },
-  progressText: {
-    fontSize: 12,
-    color: '#666',
-    width: 40,
-  },
-  progressBarBackground: {
-    flex: 1,
-    height: 8,
-    backgroundColor: '#E0E0E0',
-    borderRadius: 4,
-    marginHorizontal: 5,
-  },
-  progressBarFill: {
-    height: 8,
-    backgroundColor: '#27AE60',
-    borderRadius: 4,
-  },
-  allTargetsCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom:20,
-    marginTop: 16,
-    
-    elevation: 3, 
-  },
-  
-  noTargets: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 40,  
-    paddingHorizontal: 20,
-  },
-  noTargetsText: {
-    fontSize: 18,
-    color: '#333',
-    fontWeight: 'bold',
-    marginTop: 15,  
-    marginBottom: 10,
-  },
-  noTargetsSubtext: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-  },
-  targetListTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#111',
-    marginBottom: 10,
-    
-  },
-  
-  targetItemRow: {
-    marginBottom: 16,
-    
-    paddingBottom: 12,
-  },
-  
-  targetItemHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop:14,
-    justifyContent: 'space-between',
-  },
-  
-  targetIconContainer: {
-    backgroundColor: '#EAF2FF',
-    padding: 8,
-    borderRadius: 8,
-    marginRight: 10,
-  },
-  
-  targetItemDetails: {
-    flex: 1,
-  },
-  
-  targetItemName: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  
-  targetItemSaved: {
-    fontSize: 13,
-    color: 'orange',
-  },
-  
-  targetItemAmountContainer: {
-    alignItems: 'flex-end',
-  },
-  
-  targetItemTarget: {
-    fontSize: 13,
-    fontWeight: 'bold',
-    color: '#E63950',
-  },
-  
-  targetItemDate: {
-    fontSize: 11,
-    color: '#888',
-  },
-  
-  progressContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
     marginTop: 8,
   },
-  
   progressText: {
     fontSize: 12,
     color: '#555',
     marginHorizontal: 4,
   },
-  
   progressBarBackground: {
     flex: 1,
     height: 8,
@@ -599,18 +516,15 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     overflow: 'hidden',
   },
-  
   progressBarFill: {
     height: 8,
     backgroundColor: '#FEB01A',
     borderRadius: 4,
   },
-  
   seeMoreButton: {
     paddingVertical: 8,
     alignItems: 'center',
     marginTop: 1,
-    
     borderRadius: 8,
   },
   seeMoreText: {
@@ -618,8 +532,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  
-  
   fab: {
     position: 'absolute',
     bottom: 30,
@@ -634,19 +546,18 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)', // Background semi-transparan
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
     justifyContent: 'flex-end',
     alignItems: 'flex-end',
     padding: 20,
   },
   menuContainer: {
     alignItems: 'flex-end',
-    marginBottom: 70, // Posisikan di atas FAB
+    marginBottom: 70,
   },
   actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    
     marginBottom: 20,
     width: '100%',
   },
@@ -668,7 +579,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 3,
-    
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
@@ -681,7 +591,7 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 1, // Jarak dari tombol aksi terakhir
+    marginTop: 1,
   },
 });
 
