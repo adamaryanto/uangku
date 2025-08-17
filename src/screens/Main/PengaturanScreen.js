@@ -6,6 +6,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import CustomAlert from '../CustomAlert';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
+import { useTransactions } from '../../contexts/TransactionsContext';
 
 // Konfigurasi supaya notif tampil di foreground
 Notifications.setNotificationHandler({
@@ -96,6 +97,7 @@ const NotificationAlert = ({ visible, message, type, onClose }) => {
 
 const PengaturanScreen = ({ navigation }) => {
   const { t, language, changeLanguage } = useLanguage();
+  const { logout } = useTransactions();
   const [showLanguageModal, setShowLanguageModal] = useState(false);
   const [isReminderEnabled, setIsReminderEnabled] = useState(false);
   const [isLogoutAlertVisible, setIsLogoutAlertVisible] = useState(false);
@@ -103,8 +105,8 @@ const PengaturanScreen = ({ navigation }) => {
   const [alertMessage, setAlertMessage] = useState('');
   const [alertType, setAlertType] = useState('success'); // 'success' or 'error'
 
-  const handleLogout = () => {
-    console.log("Pengguna keluar.");
+  const handleLogout = async () => {
+    await logout();
     navigation.navigate('Login');
   };
 

@@ -2,15 +2,13 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, SafeAreaView, Image, ImageBackground, ScrollView } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { API_BASE } from '../../config/api';
 
 const RegistrasiScreen = ({ navigation }) => {
-  // State untuk setiap input
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  
-  // State terpisah untuk setiap ikon mata
+  const [confirmPassword, setConfirmPassword] = useState('');  
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false);
 
@@ -19,7 +17,7 @@ const RegistrasiScreen = ({ navigation }) => {
     return re.test(email);
   };
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     if(!fullName || !email || !password || !confirmPassword) {
       alert('Mohon isi Semua Kolom');
       return;
@@ -39,7 +37,23 @@ const RegistrasiScreen = ({ navigation }) => {
       alert('Password tidak cocok');
       return;
     }
-    navigation.navigate('SuccessRegisScreen');
+    try {
+      const res = await fetch(`${API_BASE}/api/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fullName, email, password })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        const msg = data?.message || 'Pendaftaran gagal';
+        alert(msg);
+        return;
+      }
+      navigation.navigate('SuccessRegisScreen');
+    } catch (e) {
+      console.error('Register error', e);
+      alert('Gagal terhubung ke server. Pastikan server berjalan.');
+    }
   }
 
   return (

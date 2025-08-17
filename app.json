@@ -31,6 +31,9 @@
         "projectId": "7a386e22-376f-4969-9af4-8ab9e9e5a85b"
       }
     },
-    "owner": "rchao"
+    "owner": "rchao",
+    "plugins": [
+      "expo-web-browser"
+    ]
   }
 }

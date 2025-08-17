@@ -1,22 +1,24 @@
 import React, { useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_BASE } from '../../config/api';
+import { useTransactions } from '../../contexts/TransactionsContext';
 
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, SafeAreaView, Image, ImageBackground } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-
-
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const { onLogin } = useTransactions();
 
   const validateEmail = (email) => {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return re.test(email);
   };
 
-  const handleLogin = ()=> {
+  const handleLogin = async ()=> {
     if(!email || !password){
       alert('Mohon masukkan Email dan Password anda!')
       return
@@ -32,8 +34,31 @@ const LoginScreen = ({ navigation }) => {
       return;
     }
 
-    console.log('login dengan email:', email,'dan password:', password)
-    navigation.navigate('SuccessLoginScreen', { userEmail: email });
+    try {
+      const res = await fetch(`${API_BASE}/api/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        const msg = data?.message || 'Login gagal';
+        alert(msg);
+        return;
+      }
+      // Save auth for later usage
+      try {
+        await AsyncStorage.setItem('auth', JSON.stringify({ token: data.token, user: data.user }));
+      } catch (e) {
+        console.warn('Failed to persist auth', e);
+      }
+      // Inform context immediately so it fetches this user's transactions
+      onLogin?.(data.user);
+      navigation.navigate('SuccessLoginScreen', { userEmail: data?.user?.email || email });
+    } catch (e) {
+      console.error('Login error', e);
+      alert('Gagal terhubung ke server. Pastikan server berjalan.');
+    }
   }
   return (
     
