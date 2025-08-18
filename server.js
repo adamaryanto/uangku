@@ -7,6 +7,74 @@ const bodyParser = require('body-parser');
 const cron = require('node-cron');
 const Database = require('better-sqlite3');
 const crypto = require('crypto');
+const nodemailer = require('nodemailer');
+require('dotenv').config();
+
+// Configure nodemailer with app password
+let transporter;
+
+// Function to create email transporter
+const createTransporter = () => {
+  try {
+    console.log('🔧 Initializing email transporter...');
+    
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      const errorMsg = '❌ EMAIL_USER or EMAIL_PASS environment variables not set';
+      console.warn(errorMsg);
+      throw new Error(errorMsg);
+    }
+    
+    console.log('📧 Using email:', process.env.EMAIL_USER);
+    
+    const transport = nodemailer.createTransport({
+      service: 'gmail',
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true, // true for 465, false for other ports
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+      },
+      tls: {
+        // Do not fail on invalid certs
+        rejectUnauthorized: false
+      },
+      debug: true,
+      logger: true
+    });
+    
+    // Verify connection configuration
+    transport.verify(function(error, success) {
+      if (error) {
+        console.error('❌ SMTP Connection Error:', error);
+      } else {
+        console.log('✅ SMTP Server is ready to send emails');
+      }
+    });
+    
+    return transport;
+  } catch (error) {
+    console.error('❌ Failed to create email transporter:', error);
+    return null;
+  }
+};
+
+// Initialize transporter
+transporter = createTransporter();
+
+// Verify connection configuration
+if (transporter) {
+  transporter.verify(function(error, success) {
+    if (error) {
+      console.error('SMTP Connection Error:', error);
+    } else {
+      console.log('SMTP Server is ready to take our messages');
+    }
+  });
+}
+
+// In-memory store for OTPs (in production, use Redis or a database)
+const otpStore = new Map();
 
 const app = express();
 app.use(bodyParser.json());
@@ -83,7 +151,19 @@ db.exec(`
     FOREIGN KEY(target_id) REFERENCES targets(id) ON DELETE CASCADE
   );
 
+  -- Password reset tokens
+  CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    token TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    used INTEGER DEFAULT 0,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
   CREATE INDEX IF NOT EXISTS idx_transactions_user_date ON transactions(user_id, date);
+  CREATE INDEX IF NOT EXISTS idx_password_reset_token ON password_reset_tokens(token);
 `);
 
 function hashPassword(password, salt) {
@@ -118,6 +198,251 @@ app.post('/api/register', (req, res) => {
   }
 });
 
+// Generate a random 6-digit OTP
+function generateOTP() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+// Send OTP via email
+async function sendOTP(email, otp) {
+  console.log(`\n=== SENDING OTP TO ${email} ===`);
+  
+  if (!transporter) {
+    console.error('❌ Email transporter not initialized');
+    return false;
+  }
+
+  // Simple email validation
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    console.error('❌ Invalid email format:', email);
+    return false;
+  }
+
+  try {
+    console.log(`📧 Preparing to send OTP ${otp} to ${email}`);
+    
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: 'Kode Verifikasi Reset Password',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #005AE0;">Reset Password</h2>
+          <p>Anda meminta untuk mereset password akun UangKu Anda. Gunakan kode OTP berikut untuk melanjutkan:</p>
+          <div style="background: #f5f5f5; padding: 20px; text-align: center; margin: 20px 0; font-size: 24px; letter-spacing: 5px; font-weight: bold; color: #005AE0;">
+            ${otp}
+          </div>
+          <p>Kode ini akan kedaluwarsa dalam 10 menit. Jika Anda tidak meminta reset password, Anda dapat mengabaikan email ini.</p>
+          <p>Terima kasih,<br>Tim UangKu</p>
+        </div>
+      `
+    };
+
+    console.log('📤 Sending email...');
+    const info = await transporter.sendMail(mailOptions);
+    
+    console.log('✅ Email sent successfully!');
+    console.log('Message ID:', info.messageId);
+    console.log('Preview URL:', nodemailer.getTestMessageUrl(info));
+    
+    return true;
+  } catch (error) {
+    console.error('❌ Error sending OTP email:');
+    console.error('Error name:', error.name);
+    console.error('Error message:', error.message);
+    console.error('Error code:', error.code);
+    
+    if (error.response) {
+      console.error('SMTP Response Code:', error.responseCode);
+      console.error('SMTP Response:', error.response);
+    }
+    
+    if (error.command) {
+      console.error('Failed command:', error.command);
+    }
+    
+    return false;
+  }
+}
+
+// Request password reset OTP
+app.post('/api/auth/forgot-password', async (req, res) => {
+  console.log('=== FORGOT PASSWORD REQUEST START ===');
+  console.log('Headers:', JSON.stringify(req.headers, null, 2));
+  console.log('Raw body:', req.body);
+  
+  // Ensure we have a valid JSON body
+  if (typeof req.body !== 'object' || req.body === null) {
+    console.error('Invalid request body:', req.body);
+    return res.status(400).json({ 
+      success: false, 
+      message: 'Invalid request format. Please send JSON data.'
+    });
+  }
+  
+  try {
+    const { email } = req.body;
+    console.log('Email from request:', email);
+    
+    if (!email) {
+      console.log('Email is required');
+      return res.status(400).json({ success: false, message: 'Email is required' });
+    }
+
+    // Check if user exists
+    const user = db.prepare('SELECT id, email FROM users WHERE email = ?').get(email.toLowerCase());
+    if (!user) {
+      console.log('User not found, but returning success for security');
+      // For security, don't reveal if email exists or not
+      return res.json({ 
+        success: true, 
+        message: 'Jika email Anda terdaftar, Anda akan menerima kode OTP' 
+      });
+    }
+
+    // Generate OTP
+    const otp = generateOTP();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes from now
+
+    console.log(`Generated OTP ${otp} for ${email}, expires at ${expiresAt}`);
+    
+    // Store OTP in memory (in production, use a database with TTL)
+    otpStore.set(email.toLowerCase(), { 
+      otp, 
+      expiresAt: expiresAt.toISOString() 
+    });
+
+    // In development, log the OTP instead of sending email
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[DEV] OTP for ${email}: ${otp}`);
+      return res.json({ 
+        success: true, 
+        message: 'Kode OTP telah dibuat (development mode)',
+        debug: { otp } // Only include in development
+      });
+    }
+
+    // In production, send actual email
+    try {
+      console.log('Attempting to send OTP email to:', email);
+      const sent = await sendOTP(email, otp);
+      if (!sent) {
+        console.error('Failed to send OTP email');
+        return res.status(500).json({ 
+          success: false, 
+          message: 'Gagal mengirim kode OTP. Silakan coba lagi nanti.' 
+        });
+      }
+    } catch (emailError) {
+      console.error('Error in sendOTP:', emailError);
+      return res.status(500).json({
+        success: false,
+        message: 'Terjadi kesalahan saat mengirim email. Pastikan email valid dan coba lagi.',
+        error: process.env.NODE_ENV === 'development' ? emailError.message : undefined
+      });
+    }
+
+    console.log(`OTP sent successfully to ${email}`);
+    res.json({ 
+      success: true, 
+      message: 'Kode OTP telah dikirim ke email Anda' 
+    });
+    
+  } catch (error) {
+    console.error('Error in forgot password:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Terjadi kesalahan. Silakan coba lagi nanti.' 
+    });
+  }
+});
+
+// Verify OTP
+app.post('/api/auth/verify-otp', (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) {
+      return res.status(400).json({ success: false, message: 'Email dan kode OTP diperlukan' });
+    }
+
+    const storedData = otpStore.get(email);
+    const now = new Date();
+    
+    // Check if OTP exists and is not expired
+    if (!storedData || new Date(storedData.expiresAt) < now) {
+      return res.status(400).json({ success: false, message: 'Kode OTP tidak valid atau sudah kedaluwarsa' });
+    }
+
+    // Verify OTP
+    if (storedData.otp !== otp) {
+      return res.status(400).json({ success: false, message: 'Kode OTP tidak valid' });
+    }
+
+    // Generate a reset token (for the next step)
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 1 * 60 * 60 * 1000); // 1 hour from now
+    
+    // Store the reset token (in production, store in database)
+    otpStore.set(`reset_${email}`, { 
+      token: resetToken, 
+      expiresAt: expiresAt.toISOString(),
+      verified: true
+    });
+
+    // Clear the OTP after successful verification
+    otpStore.delete(email);
+
+    res.json({ 
+      success: true, 
+      message: 'OTP berhasil diverifikasi',
+      resetToken
+    });
+  } catch (error) {
+    console.error('Error verifying OTP:', error);
+    res.status(500).json({ success: false, message: 'Terjadi kesalahan. Silakan coba lagi nanti.' });
+  }
+});
+
+// Reset password with token
+app.post('/api/auth/reset-password', (req, res) => {
+  try {
+    const { email, token, newPassword } = req.body;
+    if (!email || !token || !newPassword) {
+      return res.status(400).json({ success: false, message: 'Email, token, dan password baru diperlukan' });
+    }
+
+    // Verify token
+    const storedData = otpStore.get(`reset_${email}`);
+    const now = new Date();
+    
+    if (!storedData || !storedData.verified || new Date(storedData.expiresAt) < now) {
+      return res.status(400).json({ success: false, message: 'Token tidak valid atau sudah kedaluwarsa' });
+    }
+
+    if (storedData.token !== token) {
+      return res.status(400).json({ success: false, message: 'Token tidak valid' });
+    }
+
+    // Get user
+    const user = db.prepare('SELECT id, salt FROM users WHERE email = ?').get(email.toLowerCase());
+    if (!user) {
+      return res.status(400).json({ success: false, message: 'Akun tidak ditemukan' });
+    }
+
+    // Update password
+    const password_hash = hashPassword(newPassword, user.salt);
+    db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(password_hash, user.id);
+    
+    // Clear the reset token
+    otpStore.delete(`reset_${email}`);
+
+    res.json({ success: true, message: 'Password berhasil diubah. Silakan login dengan password baru Anda.' });
+  } catch (error) {
+    console.error('Error resetting password:', error);
+    res.status(500).json({ success: false, message: 'Terjadi kesalahan. Silakan coba lagi nanti.' });
+  }
+});
+
 app.post('/api/login', (req, res) => {
   try {
     const { email, password } = req.body || {};
@@ -127,12 +452,12 @@ app.post('/api/login', (req, res) => {
 
     const user = db.prepare('SELECT id, full_name, email, password_hash, salt FROM users WHERE email = ?').get(email.toLowerCase());
     if (!user) {
-      return res.status(401).json({ success: false, message: 'Invalid email or password' });
+      return res.status(401).json({ success: false, message: 'Email atau password salah!' });
     }
 
     const computed = hashPassword(password, user.salt);
     if (computed !== user.password_hash) {
-      return res.status(401).json({ success: false, message: 'Invalid email or password' });
+      return res.status(401).json({ success: false, message: 'Email atau password salah!' });
     }
 
     // Simple session token (for demo). In production, use JWT or proper session store.
@@ -193,7 +518,6 @@ app.get('/api/transactions', (req, res) => {
 });
 
 // ====== Target Endpoints ======
-
 // Create a new target
 app.post('/api/targets', (req, res) => {
   try {

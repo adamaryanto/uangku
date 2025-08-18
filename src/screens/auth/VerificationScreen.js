@@ -1,16 +1,77 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, SafeAreaView, Alert, ImageBackground, ScrollView } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, SafeAreaView, ImageBackground, ScrollView, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { API_BASE } from '../../config/api';
+import { Portal, Snackbar, useTheme } from 'react-native-paper';
 
 const VerificationScreen = ({ route, navigation }) => {
   // Mengambil email yang dikirim dari layar sebelumnya
   const { email } = route.params; 
+  const [loading, setLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [visible, setVisible] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+  const [alertType, setAlertType] = useState('error');
+  const [countdown, setCountdown] = useState(60);
+  const [canResend, setCanResend] = useState(false);
+  const theme = useTheme();
 
   // State untuk menyimpan 6 digit OTP
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   // Refs untuk mengontrol fokus setiap input
   const inputRefs = useRef([]);
+
+  // Countdown timer for resend OTP
+  useEffect(() => {
+    let timer;
+    if (countdown > 0) {
+      timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+    } else {
+      setCanResend(true);
+    }
+    return () => clearTimeout(timer);
+  }, [countdown]);
+
+  const showAlert = (message, type = 'error') => {
+    setAlertMessage(message);
+    setAlertType(type);
+    setVisible(true);
+  };
+
+  const hideAlert = () => setVisible(false);
+
+  const handleResendOTP = async () => {
+    if (!canResend) return;
+    
+    setResendLoading(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/auth/forgot-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Gagal mengirim ulang kode OTP');
+      }
+
+      // Reset countdown
+      setCountdown(60);
+      setCanResend(false);
+      showAlert('Kode OTP baru telah dikirim ke email Anda', 'success');
+      
+    } catch (error) {
+      console.error('Error resending OTP:', error);
+      showAlert(error.message || 'Terjadi kesalahan. Silakan coba lagi nanti.', 'error');
+    } finally {
+      setResendLoading(false);
+    }
+  };
 
   const handleOtpChange = (text, index) => {
     // Hanya izinkan satu digit angka
@@ -33,16 +94,44 @@ const VerificationScreen = ({ route, navigation }) => {
     }
   };
 
-  const handleVerifyCode = () => {
+  const handleVerifyCode = async () => {
     const code = otp.join('');
     if (code.length !== 6) {
-      Alert.alert('Error', 'Mohon masukkan 6 digit kode verifikasi.');
+      showAlert('Mohon masukkan 6 digit kode verifikasi', 'error');
       return;
     }
-    // Di aplikasi nyata, di sini Anda akan memanggil API
-    // untuk memverifikasi kode OTP.
-    console.log('Memverifikasi kode:', code);
-    navigation.navigate('CreateNewPassword');
+
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/auth/verify-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          email,
+          otp: code 
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Gagal memverifikasi kode OTP');
+      }
+
+      // Navigate to create new password screen with reset token
+      navigation.navigate('CreateNewPassword', { 
+        email,
+        resetToken: data.resetToken 
+      });
+      
+    } catch (error) {
+      console.error('Error verifying OTP:', error);
+      showAlert(error.message || 'Kode OTP tidak valid atau sudah kedaluwarsa', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -66,6 +155,20 @@ const VerificationScreen = ({ route, navigation }) => {
               <Text style={styles.description}>
                 Kami telah mengirimkan kode 6 digit ke email <Text style={styles.emailText}>{email}</Text>. Silakan masukkan kode tersebut untuk melanjutkan.
               </Text>
+              
+              <TouchableOpacity 
+                onPress={handleResendOTP} 
+                disabled={!canResend || resendLoading}
+                style={styles.resendContainer}
+              >
+                {resendLoading ? (
+                  <ActivityIndicator size="small" color="#005AE0" />
+                ) : (
+                  <Text style={[styles.resendText, canResend && styles.resendTextActive]}>
+                    Kirim ulang kode {!canResend && `(${countdown} detik)`}
+                  </Text>
+                )}
+              </TouchableOpacity>
 
               {/* Kontainer untuk 6 kotak input OTP */}
               <View style={styles.otpContainer}>
@@ -84,15 +187,48 @@ const VerificationScreen = ({ route, navigation }) => {
               </View>
 
               <TouchableOpacity 
-                  style={styles.button}
-                  onPress={handleVerifyCode}
+                style={[styles.button, loading && styles.buttonDisabled]}
+                onPress={handleVerifyCode}
+                disabled={loading}
               >
-                <Text style={styles.buttonText}>Verifikasi kode</Text>
+                {loading ? (
+                  <ActivityIndicator color="white" />
+                ) : (
+                  <Text style={styles.buttonText}>Verifikasi Kode</Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>
         </ScrollView>
       </SafeAreaView>
+      <Portal>
+        <Snackbar
+          visible={visible}
+          onDismiss={hideAlert}
+          duration={4000}
+          style={{
+            backgroundColor: alertType === 'error' ? '#FF4444' : '#4CAF50',
+            marginBottom: 20,
+            marginHorizontal: 10,
+            borderRadius: 8,
+          }}
+          action={{
+            label: 'Tutup',
+            onPress: hideAlert,
+            labelStyle: { color: 'white', fontWeight: 'bold' }
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <MaterialCommunityIcons 
+              name={alertType === 'error' ? 'alert-circle' : 'check-circle'}
+              size={20} 
+              color="white"
+              style={{ marginRight: 8 }}
+            />
+            <Text style={{ color: 'white', flex: 1 }}>{alertMessage}</Text>
+          </View>
+        </Snackbar>
+      </Portal>
     </ImageBackground>
   );
 };
@@ -176,6 +312,23 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     width: '100%',
+    marginTop: 10,
+  },
+  buttonDisabled: {
+    opacity: 0.7,
+  },
+  resendContainer: {
+    marginTop: 10,
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  resendText: {
+    color: '#999',
+    fontSize: 14,
+  },
+  resendTextActive: {
+    color: '#005AE0',
+    fontWeight: '600',
   },
   buttonText: {
     color: 'white',

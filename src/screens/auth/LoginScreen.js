@@ -6,31 +6,44 @@ import { useTransactions } from '../../contexts/TransactionsContext';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, SafeAreaView, Image, ImageBackground } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Portal, Snackbar, useTheme, Button } from 'react-native-paper';
 
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [visible, setVisible] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+  const [alertType, setAlertType] = useState('error'); // 'error' or 'success'
   const { onLogin } = useTransactions();
+  const theme = useTheme();
+
+  const showAlert = (message, type = 'error') => {
+    setAlertMessage(message);
+    setAlertType(type);
+    setVisible(true);
+  };
+
+  const hideAlert = () => setVisible(false);
 
   const validateEmail = (email) => {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return re.test(email);
   };
 
-  const handleLogin = async ()=> {
-    if(!email || !password){
-      alert('Mohon masukkan Email dan Password anda!')
-      return
+  const handleLogin = async () => {
+    if(!email || !password) {
+      showAlert('Mohon masukkan Email dan Password anda!', 'error');
+      return;
     }
 
     if (!validateEmail(email)) {
-      alert('Mohon masukkan alamat email yang valid (contoh: user@example.com)');
+      showAlert('Format email tidak valid. Gunakan format: user@example.com', 'error');
       return;
     }
 
     if (password.length < 6) {
-      alert('Password minimal harus 6 karakter');
+      showAlert('Password minimal harus 6 karakter', 'error');
       return;
     }
 
@@ -42,8 +55,8 @@ const LoginScreen = ({ navigation }) => {
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        const msg = data?.message || 'Login gagal';
-        alert(msg);
+        const msg = data?.message || 'Email atau password salah. Silakan coba lagi.';
+        showAlert(msg, 'error');
         return;
       }
       // Save auth for later usage
@@ -57,7 +70,7 @@ const LoginScreen = ({ navigation }) => {
       navigation.navigate('SuccessLoginScreen', { userEmail: data?.user?.email || email });
     } catch (e) {
       console.error('Login error', e);
-      alert('Gagal terhubung ke server. Pastikan server berjalan.');
+      showAlert('Gagal terhubung ke server. Pastikan koneksi internet Anda stabil.', 'error');
     }
   }
   return (
@@ -138,6 +151,34 @@ const LoginScreen = ({ navigation }) => {
           </View>
         </View>
       </SafeAreaView>
+      <Portal>
+        <Snackbar
+          visible={visible}
+          onDismiss={hideAlert}
+          duration={4000}
+          style={{
+            backgroundColor: alertType === 'error' ? '#FF4444' : '#4CAF50',
+            marginBottom: 20,
+            marginHorizontal: 10,
+            borderRadius: 8,
+          }}
+          action={{
+            label: 'Tutup',
+            onPress: hideAlert,
+            labelStyle: { color: 'white', fontWeight: 'bold' }
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <MaterialCommunityIcons 
+              name={alertType === 'error' ? 'alert-circle' : 'check-circle'}
+              size={20} 
+              color="white"
+              style={{ marginRight: 8 }}
+            />
+            <Text style={{ color: 'white', flex: 1 }}>{alertMessage}</Text>
+          </View>
+        </Snackbar>
+      </Portal>
     </ImageBackground>
   );
 };

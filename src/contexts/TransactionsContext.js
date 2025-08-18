@@ -60,7 +60,7 @@ export const TransactionsProvider = ({ children }) => {
     })();
   }, []);
 
-  // Load transactions from AsyncStorage
+// Load transactions from AsyncStorage
   const loadTransactions = useCallback(async () => {
     if (!currentUser?.id) {
       setTransactions([]);
@@ -104,7 +104,7 @@ export const TransactionsProvider = ({ children }) => {
   }, [currentUser?.id]);
   
 
-  // Save transactions to AsyncStorage whenever they change
+// Save transactions to AsyncStorage whenever they change
   const saveTransactions = useCallback(async (newTransactions) => {
     try {
       const jsonValue = JSON.stringify(newTransactions);
@@ -134,7 +134,7 @@ export const TransactionsProvider = ({ children }) => {
     }
   }, [currentUser?.id]);
 
-  // Load transactions on mount
+// Load transactions on mount
   useEffect(() => {
     loadTransactions();
   }, [loadTransactions]);

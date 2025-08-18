@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, SafeAreaView, Imag
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { API_BASE } from '../../config/api';
+import { Portal, Snackbar, useTheme } from 'react-native-paper';
 
 const RegistrasiScreen = ({ navigation }) => {
   const [fullName, setFullName] = useState('');
@@ -11,6 +12,18 @@ const RegistrasiScreen = ({ navigation }) => {
   const [confirmPassword, setConfirmPassword] = useState('');  
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false);
+  const [visible, setVisible] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+  const [alertType, setAlertType] = useState('error');
+  const theme = useTheme();
+
+  const showAlert = (message, type = 'error') => {
+    setAlertMessage(message);
+    setAlertType(type);
+    setVisible(true);
+  };
+
+  const hideAlert = () => setVisible(false);
 
   const validateEmail = (email) => {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -19,22 +32,32 @@ const RegistrasiScreen = ({ navigation }) => {
 
   const handleRegister = async () => {
     if(!fullName || !email || !password || !confirmPassword) {
-      alert('Mohon isi Semua Kolom');
+      showAlert('Mohon isi semua kolom yang tersedia', 'error');
+      return;
+    }
+
+    if (fullName.length < 3) {
+      showAlert('Nama lengkap minimal 3 karakter', 'error');
       return;
     }
 
     if (!validateEmail(email)) {
-      alert('Mohon masukkan alamat email yang valid (contoh: user@example.com)');
+      showAlert('Format email tidak valid. Gunakan format: user@example.com', 'error');
       return;
     }
 
     if (password.length < 6) {
-      alert('Password minimal harus 6 karakter');
+      showAlert('Password minimal harus 6 karakter', 'error');
       return;
     }
 
     if(password !== confirmPassword) {
-      alert('Password tidak cocok');
+      showAlert('Konfirmasi password tidak cocok', 'error');
+      return;
+    }
+
+    if (!/\d/.test(password) || !/[a-zA-Z]/.test(password)) {
+      showAlert('Password harus mengandung huruf dan angka', 'error');
       return;
     }
     try {
@@ -45,14 +68,17 @@ const RegistrasiScreen = ({ navigation }) => {
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        const msg = data?.message || 'Pendaftaran gagal';
-        alert(msg);
+        const msg = data?.message || 'Pendaftaran gagal. Email mungkin sudah terdaftar.';
+        showAlert(msg, 'error');
         return;
       }
-      navigation.navigate('SuccessRegisScreen');
+      showAlert('Pendaftaran berhasil! Mengarahkan ke halaman login...', 'success');
+      setTimeout(() => {
+        navigation.navigate('SuccessRegisScreen');
+      }, 2000);
     } catch (e) {
       console.error('Register error', e);
-      alert('Gagal terhubung ke server. Pastikan server berjalan.');
+      showAlert('Gagal terhubung ke server. Pastikan koneksi internet Anda stabil.', 'error');
     }
   }
 
@@ -155,6 +181,34 @@ const RegistrasiScreen = ({ navigation }) => {
             </View>
         </ScrollView>
       </SafeAreaView>
+      <Portal>
+        <Snackbar
+          visible={visible}
+          onDismiss={hideAlert}
+          duration={4000}
+          style={{
+            backgroundColor: alertType === 'error' ? '#FF4444' : '#4CAF50',
+            marginBottom: 20,
+            marginHorizontal: 10,
+            borderRadius: 8,
+          }}
+          action={{
+            label: 'Tutup',
+            onPress: hideAlert,
+            labelStyle: { color: 'white', fontWeight: 'bold' }
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <MaterialCommunityIcons 
+              name={alertType === 'error' ? 'alert-circle' : 'check-circle'}
+              size={20} 
+              color="white"
+              style={{ marginRight: 8 }}
+            />
+            <Text style={{ color: 'white', flex: 1 }}>{alertMessage}</Text>
+          </View>
+        </Snackbar>
+      </Portal>
     </ImageBackground>
   );
 };
